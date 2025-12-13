@@ -1,37 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  PencilIcon, 
-  TrashIcon, 
-  EyeIcon, 
+import {
+  PencilIcon,
+  TrashIcon,
+  EyeIcon,
   PlusIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 import { useMaterialStore } from '../../stores/materialStore';
 import { Material } from '../../types/database';
+import { useToast } from '../common/Toast';
+import { exportToExcel, getDateSuffix, downloadMaterialTemplate } from '../../lib/exportUtils';
+import { validateMaterialData } from '../../lib/importUtils';
 import MaterialForm from './MaterialForm';
 import ConfirmDialog from '../common/ConfirmDialog';
 import LoadingSpinner from '../common/LoadingSpinner';
 import StatusBadge from '../common/StatusBadge';
 import Pagination from '../common/Pagination';
+import ImportModal from '../common/ImportModal';
+import { supabase } from '../../lib/supabase';
 
 const MaterialList: React.FC = () => {
   const {
     materials,
     categories,
+    units,
     loading,
-    error,
     currentPage,
     totalPages,
     fetchMaterials,
     fetchCategories,
+    fetchUnits,
     deleteMaterial,
     searchMaterials,
     filterByCategory,
     filterByStatus
   } = useMaterialStore();
+
+  const { success, error: showError } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -39,15 +48,22 @@ const MaterialList: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [deletingMaterial, setDeletingMaterial] = useState<Material | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     fetchMaterials();
     fetchCategories();
-  }, [fetchMaterials, fetchCategories]);
+    fetchUnits();
+  }, [fetchMaterials, fetchCategories, fetchUnits]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    searchMaterials(searchTerm);
+    if (searchTerm.trim()) {
+      searchMaterials(searchTerm);
+    } else {
+      fetchMaterials();
+    }
   };
 
   const handleCategoryFilter = (categoryId: string) => {
@@ -73,6 +89,7 @@ const MaterialList: React.FC = () => {
     setSelectedCategory('');
     setSelectedStatus('');
     fetchMaterials();
+    success('数据已刷新', '物料列表已更新');
   };
 
   const handleEdit = (material: Material) => {
@@ -86,8 +103,14 @@ const MaterialList: React.FC = () => {
 
   const confirmDelete = async () => {
     if (deletingMaterial) {
-      await deleteMaterial(deletingMaterial.id);
-      setDeletingMaterial(null);
+      try {
+        await deleteMaterial(deletingMaterial.id);
+        success('删除成功', `物料 "${deletingMaterial.name}" 已删除`);
+        setDeletingMaterial(null);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : '无法删除物料';
+        showError('删除失败', message);
+      }
     }
   };
 
@@ -99,6 +122,91 @@ const MaterialList: React.FC = () => {
   const handleFormSuccess = () => {
     handleFormClose();
     fetchMaterials();
+    success('操作成功', editingMaterial ? '物料信息已更新' : '新物料已创建');
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      if (materials.length === 0) {
+        showError('导出失败', '没有数据可以导出');
+        return;
+      }
+
+      // 定义列映射
+      const columnMap = {
+        'code': '物料编码',
+        'name': '物料名称',
+        'specification': '规格型号',
+        'current_stock': '当前库存',
+        'min_stock': '最小库存',
+        'max_stock': '最大库存',
+        'unit_obj.name': '单位',
+        'category.name': '分类',
+        'status': '状态',
+        'created_at': '创建时间',
+        'updated_at': '更新时间'
+      };
+
+      // 生成文件名
+      const filename = `物料列表_${getDateSuffix()}`;
+
+      // 导出数据
+      exportToExcel(materials, filename, '物料列表', columnMap);
+
+      success('导出成功', `数据已导出到 ${filename}.xlsx`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '导出失败';
+      showError('导出失败', message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // 处理导入
+  const handleImport = async (data: unknown[]) => {
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+
+    if (!userId) {
+      throw new Error('用户未登录');
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+
+    for (const item of data) {
+      try {
+        const materialData = item as Partial<Material>;
+
+        // 插入物料数据
+        const { error } = await supabase
+          .from('materials')
+          .insert([
+            {
+              ...materialData,
+              created_by: userId,
+              updated_by: userId
+            }
+          ]);
+
+        if (error) {
+          console.error('导入物料失败:', error);
+          failedCount++;
+        } else {
+          successCount++;
+        }
+      } catch (error) {
+        console.error('处理物料数据失败:', error);
+        failedCount++;
+      }
+    }
+
+    // 刷新物料列表
+    await fetchMaterials();
+
+    return { success: successCount, failed: failedCount };
   };
 
   const getStatusColor = (status: string) => {
@@ -128,13 +236,30 @@ const MaterialList: React.FC = () => {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">物料管理</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-          >
-            <PlusIcon className="h-5 w-5" />
-            <span>新建物料</span>
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            >
+              <ArrowUpTrayIcon className="h-5 w-5" />
+              <span>批量导入</span>
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={isExporting || materials.length === 0}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              <ArrowDownTrayIcon className="h-5 w-5" />
+              <span>{isExporting ? '导出中...' : '导出'}</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            >
+              <PlusIcon className="h-5 w-5" />
+              <span>新建物料</span>
+            </button>
+          </div>
         </div>
 
         {/* 搜索和筛选 */}
@@ -188,13 +313,6 @@ const MaterialList: React.FC = () => {
             </div>
           </form>
         </div>
-
-        {/* 错误提示 */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
 
         {/* 物料列表 */}
         <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -337,6 +455,18 @@ const MaterialList: React.FC = () => {
           message={`确定要删除物料 "${deletingMaterial.name}" (${deletingMaterial.code}) 吗？此操作不可恢复。`}
           onConfirm={confirmDelete}
           onCancel={() => setDeletingMaterial(null)}
+        />
+      )}
+
+      {/* 导入模态框 */}
+      {showImportModal && (
+        <ImportModal
+          title="批量导入物料"
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImport}
+          onDownloadTemplate={downloadMaterialTemplate}
+          validateData={(rows) => validateMaterialData(rows, categories, units)}
+          templateFields={['code', 'name', 'specification', 'unit', 'category_id', 'current_stock', 'min_stock', 'max_stock', 'status']}
         />
       )}
     </div>

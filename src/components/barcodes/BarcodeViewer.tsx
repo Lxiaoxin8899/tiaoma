@@ -10,11 +10,11 @@ interface BarcodeViewerProps {
   showValue?: boolean;
 }
 
-const BarcodeViewer: React.FC<BarcodeViewerProps> = ({ 
-  value, 
-  type, 
-  width = 2, 
-  height = 50,
+const BarcodeViewer: React.FC<BarcodeViewerProps> = ({
+  value,
+  type,
+  width = 2,
+  height = 100,
   showValue = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -24,19 +24,24 @@ const BarcodeViewer: React.FC<BarcodeViewerProps> = ({
 
     try {
       if (type === 'barcode') {
+        const scale = 2; // Internal render scale for sharpness
         JsBarcode(canvasRef.current, value, {
           format: 'CODE128',
-          width: width,
-          height: height,
+          width: width * scale,
+          height: height * scale,
           displayValue: showValue,
-          margin: 10,
+          fontSize: 16 * scale,
+          margin: 10 * scale,
+          textMargin: 2 * scale,
           background: '#ffffff',
           lineColor: '#000000'
         });
       } else {
+        const scale = 4; // High res for QR
         QRCode.toCanvas(canvasRef.current, value, {
-          width: height * 2, // QR code usually needs to be square and larger
+          width: 200 * scale,
           margin: 2,
+          errorCorrectionLevel: 'H',
           color: {
             dark: '#000000',
             light: '#ffffff'
@@ -51,8 +56,16 @@ const BarcodeViewer: React.FC<BarcodeViewerProps> = ({
   }, [value, type, width, height, showValue]);
 
   return (
-    <div className="flex justify-center items-center p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-      <canvas ref={canvasRef} />
+    <div className="flex justify-center items-center overflow-hidden w-full">
+      {/* Use CSS to scale down the high-res canvas to fit container if needed, maintaining aspect ratio */}
+      <canvas
+        ref={canvasRef}
+        style={{
+          maxWidth: '100%',
+          height: 'auto',
+          maxHeight: '300px' // Prevent it from becoming too tall
+        }}
+      />
     </div>
   );
 };

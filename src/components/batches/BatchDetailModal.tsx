@@ -4,6 +4,7 @@ import { XMarkIcon, CalendarIcon, MapPinIcon, UserIcon, DocumentTextIcon } from 
 import { MaterialBatch } from '@/types/database'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { getStatusBadgeColor, getStatusText } from '@/utils/statusHelpers'
 
 interface BatchDetailModalProps {
   batch: MaterialBatch
@@ -11,25 +12,8 @@ interface BatchDetailModalProps {
 }
 
 const BatchDetailModal: React.FC<BatchDetailModalProps> = ({ batch, onClose }) => {
-  const getStatusText = (status: string) => {
-    const statusMap: Record<string, string> = {
-      active: '活跃',
-      completed: '完成',
-      expired: '过期',
-      cancelled: '取消'
-    }
-    return statusMap[status] || status
-  }
-
-  const getStatusBadgeColor = (status: string) => {
-    const colorMap: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      completed: 'bg-blue-100 text-blue-800',
-      expired: 'bg-red-100 text-red-800',
-      cancelled: 'bg-gray-100 text-gray-800'
-    }
-    return colorMap[status] || 'bg-gray-100 text-gray-800'
-  }
+  // 说明：remaining_quantity 表示批次当前库存；quantity 表示入库数量/初始数量。
+  const remainingQty = batch.remaining_quantity ?? batch.quantity
 
   const isExpired = (expiryDate: string) => {
     return new Date(expiryDate) < new Date()
@@ -82,15 +66,16 @@ const BatchDetailModal: React.FC<BatchDetailModalProps> = ({ batch, onClose }) =
                   <p className="text-sm text-gray-900 font-medium">{batch.batch_number}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">数量</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">当前库存</label>
                   <p className="text-sm text-gray-900">
-                    {batch.quantity} {batch.material?.unit_obj?.name || batch.material?.unit}
-                    {batch.quantity < 10 && (
+                    {remainingQty} {batch.material?.unit_obj?.name || batch.material?.unit}
+                    {remainingQty < 10 && (
                       <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
                         库存偏低
                       </span>
                     )}
                   </p>
+                  <p className="mt-1 text-xs text-gray-500">入库数量：{batch.quantity}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>

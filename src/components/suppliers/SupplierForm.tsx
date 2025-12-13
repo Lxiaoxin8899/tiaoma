@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSupplierStore } from '../../stores/supplierStore';
 import { Supplier, SupplierFormData } from '../../types/database';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../common/Toast';
 
 interface SupplierFormProps {
   initialData?: Supplier;
@@ -11,6 +11,7 @@ interface SupplierFormProps {
 
 const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const { createSupplier, updateSupplier, loading } = useSupplierStore();
+  const { success } = useToast();
   
   const [formData, setFormData] = useState<SupplierFormData>({
     code: initialData?.code || '',
@@ -52,26 +53,20 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSuccess, onC
     }
     
     try {
-      let success = false;
+      let result = false;
       
       if (initialData) {
-        success = await updateSupplier(initialData.id, formData);
-        if (success) {
-          toast.success('供应商更新成功');
-        }
+        result = await updateSupplier(initialData.id, formData);
       } else {
-        success = await createSupplier(formData);
-        if (success) {
-          toast.success('供应商创建成功');
-        }
+        result = await createSupplier(formData);
       }
       
-      if (success) {
+      if (result) {
+        success(initialData ? '供应商更新成功' : '供应商创建成功');
         onSuccess();
       }
     } catch (error) {
       console.error('Submit error:', error);
-      // 错误已在 store 中处理
     }
   };
 

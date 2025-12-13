@@ -1,10 +1,10 @@
 import React from 'react'
-import BarcodeGenerator from '@/components/barcodes/BarcodeGenerator'
+import BarcodeGeneratorRedesigned from '@/components/barcodes/BarcodeGeneratorRedesigned'
 import { useAuthStore } from '@/stores/authStore'
 
 const BarcodeManagement: React.FC = () => {
   const { hasPermission } = useAuthStore()
-  
+
   if (!hasPermission('read_barcodes')) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -22,14 +22,14 @@ const BarcodeManagement: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">条码生成</h1>
+    <div className="container mx-auto px-4 py-4 h-full">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">条码管理器</h1>
         <p className="mt-1 text-sm text-gray-500">
-          生成、预览和打印物料或批次的条形码/二维码。
+          物料/批次条码预览与打印
         </p>
       </div>
-      <BarcodeGenerator />
+      <BarcodeGeneratorRedesigned />
     </div>
   )
 }

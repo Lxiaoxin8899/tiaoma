@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { 
-  Material, 
-  MaterialFormData, 
+import type {
+  Material,
+  MaterialFormData,
   MaterialQueryParams,
   MaterialCategory,
   Unit,
   Supplier,
-  MaterialStats
+  MaterialStats,
 } from '../types/database';
-import { handleError } from '../lib/supabase';
+import { errorHandler, reportError } from '../lib/errorHandler';
 
 interface MaterialState {
   materials: Material[];
@@ -22,25 +22,25 @@ interface MaterialState {
   currentPage: number;
   totalPages: number;
   totalItems: number;
-  
+
   // 获取数据
   fetchMaterials: (params?: MaterialQueryParams) => Promise<void>;
   fetchCategories: () => Promise<void>;
   fetchUnits: () => Promise<void>;
   fetchSuppliers: () => Promise<void>;
   fetchStats: () => Promise<void>;
-  
-  // CRUD操作
+
+  // CRUD
   createMaterial: (data: MaterialFormData) => Promise<Material | null>;
   updateMaterial: (id: string, data: Partial<MaterialFormData>) => Promise<Material | null>;
   deleteMaterial: (id: string) => Promise<boolean>;
-  
-  // 搜索和筛选
+
+  // 搜索/筛选（简单封装，便于组件调用）
   searchMaterials: (query: string) => Promise<void>;
   filterByCategory: (categoryId: string) => Promise<void>;
   filterByStatus: (status: string) => Promise<void>;
-  
-  // 辅助函数
+
+  // 辅助
   getMaterialById: (id: string) => Material | undefined;
   getMaterialByCode: (code: string) => Material | undefined;
   clearError: () => void;
@@ -60,20 +60,25 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
   fetchMaterials: async (params: MaterialQueryParams = {}) => {
     set({ loading: true, error: null });
-    
+
     try {
       let query = supabase
         .from('materials')
-        .select(`
+        // 说明：在线模式用外键联表；离线模式由 localSupabase 在本地自动补齐 unit_obj/category
+        .select(
+          `
           *,
-          unit:units(id, name, symbol),
-          category:material_categories(id, name, code),
-          supplier:suppliers(id, name, code)
-        `, { count: 'exact' });
+          unit_obj:units(id, code, name, symbol),
+          category:material_categories(id, code, name)
+        `,
+          { count: 'exact' },
+        );
 
       // 搜索条件
       if (params.search) {
-        query = query.or(`name.ilike.%${params.search}%,code.ilike.%${params.search}%,specification.ilike.%${params.search}%`);
+        query = query.or(
+          `name.ilike.%${params.search}%,code.ilike.%${params.search}%,specification.ilike.%${params.search}%`,
+        );
       }
 
       // 分类筛选
@@ -99,179 +104,169 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       const limit = params.limit || 20;
       const from = (page - 1) * limit;
       const to = from + limit - 1;
-
       query = query.range(from, to);
 
       const { data, error, count } = await query;
-
       if (error) throw error;
 
       const totalItems = count || 0;
-      const totalPages = Math.ceil(totalItems / limit);
+      const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
-      set({ 
-        materials: data || [], 
-        loading: false, 
+      set({
+        materials: (data || []) as Material[],
         totalItems,
         totalPages,
-        currentPage: page
+        currentPage: page,
+        loading: false,
       });
-    } catch (error) {
-      console.error('获取物料列表失败:', error);
-      set({ 
-        error: handleError(error).message, 
-        loading: false 
-      });
+    } catch (err) {
+      const appError = errorHandler.handle(err, '获取物料列表失败');
+      reportError(err, 'material.fetchMaterials', { params });
+      set({ error: errorHandler.getUserMessage(appError), loading: false });
     }
   },
 
   fetchCategories: async () => {
     set({ loading: true, error: null });
-    
-    try {
-      const { data, error } = await supabase
-        .from('material_categories')
-        .select('*')
-        .order('name');
 
+    try {
+      const { data, error } = await supabase.from('material_categories').select('*').order('name');
       if (error) throw error;
 
-      set({ categories: data || [], loading: false });
-    } catch (error) {
-      console.error('获取物料分类失败:', error);
-      set({ 
-        error: handleError(error).message, 
-        loading: false 
-      });
+      set({ categories: (data || []) as MaterialCategory[], loading: false });
+    } catch (err) {
+      const appError = errorHandler.handle(err, '获取物料分类失败');
+      reportError(err, 'material.fetchCategories');
+      set({ error: errorHandler.getUserMessage(appError), loading: false });
     }
   },
 
   fetchUnits: async () => {
     set({ loading: true, error: null });
-    
-    try {
-      const { data, error } = await supabase
-        .from('units')
-        .select('*')
-        .order('name');
 
+    try {
+      const { data, error } = await supabase.from('units').select('*').order('name');
       if (error) throw error;
 
-      set({ units: data || [], loading: false });
-    } catch (error) {
-      console.error('获取单位失败:', error);
-      set({ 
-        error: handleError(error).message, 
-        loading: false 
-      });
+      set({ units: (data || []) as Unit[], loading: false });
+    } catch (err) {
+      const appError = errorHandler.handle(err, '获取单位失败');
+      reportError(err, 'material.fetchUnits');
+      set({ error: errorHandler.getUserMessage(appError), loading: false });
     }
   },
 
   fetchSuppliers: async () => {
+    // 备注：目前物料表单未使用 supplier，但保留该能力便于后续扩展
     set({ loading: true, error: null });
-    
-    try {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
 
+    try {
+      const { data, error } = await supabase.from('suppliers').select('*').order('name');
       if (error) throw error;
 
-      set({ suppliers: data || [], loading: false });
-    } catch (error) {
-      console.error('获取供应商失败:', error);
-      set({ 
-        error: handleError(error).message, 
-        loading: false 
-      });
+      set({ suppliers: (data || []) as Supplier[], loading: false });
+    } catch (err) {
+      const appError = errorHandler.handle(err, '获取供应商失败');
+      reportError(err, 'material.fetchSuppliers');
+      set({ error: errorHandler.getUserMessage(appError), loading: false });
     }
   },
 
   fetchStats: async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // 获取物料统计
+      // 统计数据优先基于数据库计算；离线模式同样可用
       const { data: materials, error: materialsError } = await supabase
         .from('materials')
         .select('status, current_stock, min_stock');
 
       if (materialsError) throw materialsError;
 
-      // 获取分类统计
       const { count: categoryCount, error: categoryError } = await supabase
         .from('material_categories')
         .select('*', { count: 'exact', head: true });
 
       if (categoryError) throw categoryError;
 
-      const totalMaterials = materials?.length || 0;
-      const activeMaterials = materials?.filter(m => m.status === 'active').length || 0;
-      const lowStockCount = materials?.filter(m => m.current_stock <= m.min_stock).length || 0;
+      const rows = (materials || []) as Array<{
+        status?: string;
+        current_stock?: number;
+        min_stock?: number;
+      }>;
+
+      const totalMaterials = rows.length;
+      const activeMaterials = rows.filter((m) => m.status === 'active').length;
+      const lowStockCount = rows.filter((m) => (m.current_stock ?? 0) <= (m.min_stock ?? 0)).length;
 
       const stats: MaterialStats = {
         total_materials: totalMaterials,
         active_materials: activeMaterials,
         low_stock_count: lowStockCount,
-        total_categories: categoryCount || 0
+        total_categories: categoryCount || 0,
       };
 
       set({ stats });
-    } catch (error) {
-      console.error('获取统计信息失败:', error);
+    } catch (err) {
+      reportError(err, 'material.fetchStats');
     }
   },
 
   createMaterial: async (data: MaterialFormData) => {
     set({ loading: true, error: null });
-    
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('用户未登录');
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+
+      if (!userId) {
+        set({ loading: false, error: '用户未登录' });
+        return null;
+      }
 
       const { data: newMaterial, error } = await supabase
         .from('materials')
-        .insert([{
-          ...data,
-          current_stock: 0,
-          created_by: user.id,
-          updated_by: user.id
-        }])
+        .insert([
+          {
+            ...data,
+            current_stock: 0,
+            created_by: userId,
+            updated_by: userId,
+          },
+        ])
         .select()
         .single();
 
       if (error) throw error;
 
-      // 重新获取列表
-      await get().fetchMaterials();
-      
+      // 重新拉取列表，保证联表字段一致
+      await get().fetchMaterials({ page: get().currentPage });
+
       set({ loading: false });
-      return newMaterial;
-    } catch (error) {
-      console.error('创建物料失败:', error);
-      set({ 
-        error: handleError(error).message, 
-        loading: false 
-      });
+      return (newMaterial as Material) || null;
+    } catch (err) {
+      const appError = errorHandler.handle(err, '创建物料失败');
+      reportError(err, 'material.createMaterial', { data });
+      set({ error: errorHandler.getUserMessage(appError), loading: false });
       return null;
     }
   },
 
   updateMaterial: async (id: string, data: Partial<MaterialFormData>) => {
     set({ loading: true, error: null });
-    
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('用户未登录');
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+
+      if (!userId) {
+        set({ loading: false, error: '用户未登录' });
+        return null;
+      }
 
       const { data: updatedMaterial, error } = await supabase
         .from('materials')
         .update({
           ...data,
-          updated_by: user.id
+          updated_by: userId,
         })
         .eq('id', id)
         .select()
@@ -279,49 +274,38 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
       if (error) throw error;
 
-      // 更新本地状态
-      set(state => ({
-        materials: state.materials.map(m => 
-          m.id === id ? { ...m, ...updatedMaterial } : m
-        ),
-        loading: false
+      // 更新本地列表（避免整页刷新闪烁）
+      set((state) => ({
+        materials: state.materials.map((m) => (m.id === id ? { ...m, ...(updatedMaterial as Material) } : m)),
+        loading: false,
       }));
 
-      return updatedMaterial;
-    } catch (error) {
-      console.error('更新物料失败:', error);
-      set({ 
-        error: handleError(error).message, 
-        loading: false 
-      });
+      return (updatedMaterial as Material) || null;
+    } catch (err) {
+      const appError = errorHandler.handle(err, '更新物料失败');
+      reportError(err, 'material.updateMaterial', { id, data });
+      set({ error: errorHandler.getUserMessage(appError), loading: false });
       return null;
     }
   },
 
   deleteMaterial: async (id: string) => {
     set({ loading: true, error: null });
-    
-    try {
-      const { error } = await supabase
-        .from('materials')
-        .delete()
-        .eq('id', id);
 
+    try {
+      const { error } = await supabase.from('materials').delete().eq('id', id);
       if (error) throw error;
 
-      // 更新本地状态
-      set(state => ({
-        materials: state.materials.filter(m => m.id !== id),
-        loading: false
+      set((state) => ({
+        materials: state.materials.filter((m) => m.id !== id),
+        loading: false,
       }));
 
       return true;
-    } catch (error) {
-      console.error('删除物料失败:', error);
-      set({ 
-        error: handleError(error).message, 
-        loading: false 
-      });
+    } catch (err) {
+      const appError = errorHandler.handle(err, '删除物料失败');
+      reportError(err, 'material.deleteMaterial', { id });
+      set({ error: errorHandler.getUserMessage(appError), loading: false });
       return false;
     }
   },
@@ -338,15 +322,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     await get().fetchMaterials({ status });
   },
 
-  getMaterialById: (id: string) => {
-    return get().materials.find(m => m.id === id);
-  },
-
-  getMaterialByCode: (code: string) => {
-    return get().materials.find(m => m.code === code);
-  },
+  getMaterialById: (id: string) => get().materials.find((m) => m.id === id),
+  getMaterialByCode: (code: string) => get().materials.find((m) => m.code === code),
 
   clearError: () => {
     set({ error: null });
-  }
+  },
 }));

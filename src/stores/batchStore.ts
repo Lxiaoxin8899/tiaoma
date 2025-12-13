@@ -60,8 +60,9 @@ export const useBatchStore = create<BatchState>((set, get) => ({
   setPagination: (currentPage, pageSize) => set({ currentPage, pageSize }),
   
   fetchBatches: async (params) => {
-    const { currentPage, pageSize, searchQuery, selectedMaterialId } = get()
-    const { page = currentPage, limit = pageSize, materialId = selectedMaterialId } = params || {}
+    const { currentPage, pageSize, searchQuery: storedSearch, selectedMaterialId } = get()
+    const { page = currentPage, limit = pageSize, materialId = selectedMaterialId, search } = params || {}
+    const effectiveSearch = search ?? storedSearch
     
     set({ loading: true, error: null })
     
@@ -75,7 +76,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
             code,
             name,
             specification,
-            unit:units(name)
+            unit_obj:units(id, code, name, symbol)
           ),
           supplier:suppliers!supplier_id(
             id,
@@ -86,8 +87,8 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         .order('created_at', { ascending: false })
       
       // Apply filters
-      if (searchQuery) {
-        query = query.or(`batch_number.ilike.%${searchQuery}%,material.name.ilike.%${searchQuery}%`)
+      if (effectiveSearch) {
+        query = query.or(`batch_number.ilike.%${effectiveSearch}%,material.name.ilike.%${effectiveSearch}%`)
       }
       
       if (materialId) {
@@ -102,9 +103,10 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       const { data, error, count } = await query
       
       if (error) throw error
-      
+
+      const batches = (data as MaterialBatch[] | null) || []
       set({
-        batches: data || [],
+        batches,
         totalCount: count || 0,
         currentPage: page,
         pageSize: limit,
@@ -124,6 +126,9 @@ export const useBatchStore = create<BatchState>((set, get) => ({
     set({ loading: true, error: null })
     
     try {
+      const { data: authData } = await supabase.auth.getUser()
+      const userId = authData?.user?.id
+
       // Generate batch number if not provided
       let batchNumber = data.batch_number
       if (!batchNumber) {
@@ -133,8 +138,12 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       const batchData = {
         ...data,
         batch_number: batchNumber,
-        status: data.status || 'active',
-        created_by: (await supabase.auth.getUser()).data.user?.id
+        // 数据库/类型里批次状态使用 pending/available/...，这里默认使用 pending
+        status: data.status || 'pending',
+        // 初始库存=入库数量（后续出库只更新 remaining_quantity）
+        remaining_quantity: data.remaining_quantity ?? data.quantity,
+        created_by: userId,
+        updated_by: userId,
       }
       
       const { error } = await supabase
@@ -161,12 +170,35 @@ export const useBatchStore = create<BatchState>((set, get) => ({
     set({ loading: true, error: null })
     
     try {
+      const current = get().batches.find((b) => b.id === id)
+
+      // 说明：如果是从“编辑入库单”更新了入库数量(quantity)，但没有显式传 remaining_quantity，
+      // 则按“已出库数量不变”的原则重算 remaining_quantity，避免库存/统计错乱。
+      const updatePayload: Record<string, unknown> = {
+        ...data,
+        updated_at: new Date().toISOString(),
+      }
+
+      const explicitRemaining = (data as Partial<{ remaining_quantity?: number }>).remaining_quantity
+      if (typeof explicitRemaining !== 'number' && typeof data.quantity === 'number' && current) {
+        const prevQty = current.quantity ?? data.quantity
+        const prevRemaining = current.remaining_quantity ?? prevQty
+        const consumed = Math.max(0, prevQty - prevRemaining)
+        updatePayload.remaining_quantity = Math.max(0, data.quantity - consumed)
+      }
+
+      // 若显式更新 remaining_quantity（例如出库），做一次下限保护与状态联动
+      if (typeof explicitRemaining === 'number') {
+        const nextRemaining = Math.max(0, explicitRemaining)
+        updatePayload.remaining_quantity = nextRemaining
+        if (nextRemaining === 0 && !updatePayload.status) {
+          updatePayload.status = 'disposed'
+        }
+      }
+
       const { error } = await supabase
         .from('material_batches')
-        .update({
-          ...data,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', id)
       
       if (error) throw error
@@ -219,7 +251,8 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         .eq('id', materialId)
         .single()
       
-      if (!material) {
+      const materialRow = material as { code?: string } | null
+      if (!materialRow?.code) {
         throw new Error('物料不存在')
       }
       
@@ -238,7 +271,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       
       const sequence = ((count || 0) + 1).toString().padStart(3, '0')
       
-      return `${material.code}-${dateStr}-${sequence}`
+      return `${materialRow.code}-${dateStr}-${sequence}`
     } catch (error) {
       console.error('Error generating batch number:', error)
       throw error
@@ -271,7 +304,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         .order('created_at', { ascending: false })
       
       if (error) throw error
-      return data || []
+      return (data as MaterialBatch[] | null) || []
     } catch (error) {
       console.error('Error fetching batches by material:', error)
       return []
@@ -280,6 +313,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
   
   getExpiredBatches: async () => {
     try {
+      const today = new Date().toISOString().split('T')[0]
       const { data, error } = await supabase
         .from('material_batches')
         .select(`
@@ -291,12 +325,12 @@ export const useBatchStore = create<BatchState>((set, get) => ({
             specification
           )
         `)
-        .lt('expiry_date', new Date().toISOString())
-        .eq('status', 'active')
+        .lt('expiry_date', today)
+        .eq('status', 'expired')
         .order('expiry_date', { ascending: true })
       
       if (error) throw error
-      return data || []
+      return (data as MaterialBatch[] | null) || []
     } catch (error) {
       console.error('Error fetching expired batches:', error)
       return []
@@ -305,8 +339,6 @@ export const useBatchStore = create<BatchState>((set, get) => ({
   
   getBatchStatistics: async () => {
     try {
-      const today = new Date().toISOString()
-      
       // Total batches
       const { count: totalBatches } = await supabase
         .from('material_batches')
@@ -316,21 +348,20 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       const { count: activeBatches } = await supabase
         .from('material_batches')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
+        .eq('status', 'available')
       
       // Expired batches
       const { count: expiredBatches } = await supabase
         .from('material_batches')
         .select('*', { count: 'exact', head: true })
-        .lt('expiry_date', today)
-        .eq('status', 'active')
+        .eq('status', 'expired')
       
-      // Low stock batches (quantity < 10)
+      // Low stock batches (remaining_quantity < 10)
       const { count: lowStockBatches } = await supabase
         .from('material_batches')
         .select('*', { count: 'exact', head: true })
-        .lt('quantity', 10)
-        .eq('status', 'active')
+        .lt('remaining_quantity', 10)
+        .eq('status', 'available')
       
       return {
         totalBatches: totalBatches || 0,

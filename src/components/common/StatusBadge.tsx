@@ -2,7 +2,8 @@ import React from 'react';
 import { clsx } from 'clsx';
 
 interface StatusBadgeProps {
-  status: string;
+  // 支持 boolean/number 是为了在“系统设置”等页面直接展示开关/数值状态
+  status: string | number | boolean;
   color?: 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'purple';
   text?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -12,10 +13,11 @@ interface StatusBadgeProps {
 const StatusBadge: React.FC<StatusBadgeProps> = ({ 
   status, 
   color = 'gray', 
-  text = status,
+  text,
   size = 'md',
   className 
 }) => {
+  const displayText = text ?? (typeof status === 'string' ? status : String(status));
   const colorClasses = {
     green: 'bg-green-100 text-green-800 border-green-200',
     red: 'bg-red-100 text-red-800 border-red-200',
@@ -53,7 +55,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({
           }
         )}
       />
-      {text}
+      {displayText}
     </span>
   );
 };

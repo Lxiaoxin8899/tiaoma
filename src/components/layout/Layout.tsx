@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Bars3Icon, 
-  XMarkIcon, 
+import {
+  Bars3Icon,
+  XMarkIcon,
   HomeIcon,
   CubeIcon,
   QrCodeIcon,
@@ -12,7 +12,8 @@ import {
   UserCircleIcon,
   ChartBarIcon,
   TruckIcon,
-  ArchiveBoxIcon
+  ArchiveBoxIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -20,22 +21,23 @@ const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut, hasPermission } = useAuthStore();
-  
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const navigation = [
     { name: '仪表盘', href: '/', icon: HomeIcon, permission: 'read' },
     { name: '物料管理', href: '/materials', icon: CubeIcon, permission: 'read_materials' },
-    { name: '批次管理', href: '/batches', icon: ArchiveBoxIcon, permission: 'read_batches' },
+    { name: '库存管理', href: '/batches', icon: ArchiveBoxIcon, permission: 'read_batches' },
     { name: '供应商管理', href: '/suppliers', icon: TruckIcon, permission: 'read_suppliers' },
     { name: '条码生成', href: '/barcodes', icon: QrCodeIcon, permission: 'read_barcodes' },
     { name: '统计分析', href: '/analytics', icon: ChartBarIcon, permission: 'read_analytics' },
     { name: '用户管理', href: '/users', icon: UserGroupIcon, permission: 'read_users' },
+    { name: '操作日志', href: '/audit-logs', icon: ClipboardDocumentListIcon, permission: 'read_audit_logs' },
     { name: '系统设置', href: '/settings', icon: CogIcon, permission: 'read_settings' }
   ];
 
-  const filteredNavigation = navigation.filter(item => 
+  const filteredNavigation = navigation.filter(item =>
     hasPermission(item.permission)
   );
 
@@ -65,16 +67,15 @@ const Layout: React.FC = () => {
     <div className="h-screen flex bg-gray-100">
       {/* 移动端遮罩层 */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* 侧边栏 */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <Link to="/" className="flex items-center space-x-3">
             <div className="flex-shrink-0">
@@ -100,20 +101,18 @@ const Layout: React.FC = () => {
               onClick={() => setSidebarOpen(false)}
               className={`
                 group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors
-                ${
-                  isActive(item.href)
-                    ? 'bg-blue-100 text-blue-900 border-r-2 border-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                ${isActive(item.href)
+                  ? 'bg-blue-100 text-blue-900 border-r-2 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }
               `}
             >
               <item.icon
                 className={`
                   mr-3 h-5 w-5 flex-shrink-0
-                  ${
-                    isActive(item.href)
-                      ? 'text-blue-600'
-                      : 'text-gray-400 group-hover:text-gray-500'
+                  ${isActive(item.href)
+                    ? 'text-blue-600'
+                    : 'text-gray-400 group-hover:text-gray-500'
                   }
                 `}
               />
@@ -175,9 +174,9 @@ const Layout: React.FC = () => {
                       {user?.full_name || user?.username || '用户'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {user?.role === 'admin' ? '管理员' : 
-                       user?.role === 'manager' ? '经理' :
-                       user?.role === 'operator' ? '操作员' : '查看者'}
+                      {user?.role === 'admin' ? '管理员' :
+                        user?.role === 'manager' ? '经理' :
+                          user?.role === 'operator' ? '操作员' : '查看者'}
                     </div>
                   </div>
                 </button>

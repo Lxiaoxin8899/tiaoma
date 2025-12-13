@@ -67,9 +67,10 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
       const { data, error, count } = await query
       
       if (error) throw error
-      
+
+      const suppliers = (data as Supplier[] | null) || []
       set({
-        suppliers: data || [],
+        suppliers,
         totalCount: count || 0,
         currentPage: page,
         pageSize: limit,

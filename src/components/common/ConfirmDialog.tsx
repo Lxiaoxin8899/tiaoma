@@ -11,6 +11,9 @@ interface ConfirmDialogProps {
   cancelText?: string;
   confirmButtonClass?: string;
   cancelButtonClass?: string;
+  // 兼容旧用法：不建议新代码继续使用 confirmClass/cancelClass
+  confirmClass?: string;
+  cancelClass?: string;
   icon?: React.ReactNode;
   isOpen?: boolean; // Add optional props to match usage
   variant?: 'danger' | 'info' | 'warning'; // Add optional props to match usage
@@ -27,6 +30,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText,
   confirmButtonClass,
   cancelButtonClass,
+  confirmClass,
+  cancelClass,
   icon,
   isOpen = true,
   variant = 'danger',
@@ -38,7 +43,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const finalCancelText = cancelLabel || cancelText || '取消';
 
   // Determine styles based on variant
-  let finalConfirmClass = confirmButtonClass;
+  let finalConfirmClass = confirmButtonClass || confirmClass;
   if (!finalConfirmClass) {
     switch (variant) {
       case 'danger':
@@ -54,7 +59,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   }
 
-  let finalCancelClass = cancelButtonClass || 'bg-gray-300 hover:bg-gray-400 text-gray-700';
+  const finalCancelClass = cancelButtonClass || cancelClass || 'bg-gray-300 hover:bg-gray-400 text-gray-700';
 
   const defaultIcon = variant === 'danger' || variant === 'warning' 
     ? <ExclamationTriangleIcon className={`h-6 w-6 ${variant === 'danger' ? 'text-red-600' : 'text-orange-600'}`} />

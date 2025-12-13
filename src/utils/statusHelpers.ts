@@ -7,9 +7,10 @@ export const getStatusBadgeColor = (status: string): string => {
     
     // Batch statuses
     pending: 'bg-yellow-100 text-yellow-800',
-    completed: 'bg-blue-100 text-blue-800',
+    available: 'bg-green-100 text-green-800',
+    locked: 'bg-orange-100 text-orange-800',
     expired: 'bg-red-100 text-red-800',
-    cancelled: 'bg-gray-100 text-gray-800',
+    disposed: 'bg-gray-100 text-gray-800',
     
     // General statuses
     enabled: 'bg-green-100 text-green-800',
@@ -35,10 +36,11 @@ export const getStatusText = (status: string): string => {
     discontinued: '停产',
     
     // Batch statuses
-    pending: '待处理',
-    completed: '完成',
+    pending: '待入库',
+    available: '可用',
+    locked: '锁定',
     expired: '过期',
-    cancelled: '取消',
+    disposed: '已处置',
     
     // General statuses
     enabled: '启用',

@@ -205,7 +205,7 @@ const Dashboard: React.FC = () => {
           <div className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Link
-                to="/materials/new"
+                to="/materials"
                 className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <div className="text-center">
@@ -215,7 +215,7 @@ const Dashboard: React.FC = () => {
               </Link>
               
               <Link
-                to="/batches/new"
+                to="/batches"
                 className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <div className="text-center">
@@ -225,7 +225,7 @@ const Dashboard: React.FC = () => {
               </Link>
               
               <Link
-                to="/barcodes/generate"
+                to="/barcodes"
                 className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <div className="text-center">

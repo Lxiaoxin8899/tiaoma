@@ -3,7 +3,7 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useMaterialStore } from '../../stores/materialStore';
 import { Material, MaterialFormData } from '../../types/database';
-import { validateData } from '../../lib/supabase';
+import { useToast } from '../common/Toast';
 
 interface MaterialFormProps {
   material?: Material | null;
@@ -12,7 +12,8 @@ interface MaterialFormProps {
 }
 
 const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSuccess }) => {
-  const { createMaterial, updateMaterial, categories, units, suppliers, fetchCategories, fetchUnits, fetchSuppliers } = useMaterialStore();
+  const { createMaterial, updateMaterial, categories, units, fetchCategories, fetchUnits, fetchSuppliers } = useMaterialStore();
+  const { success, error: showError } = useToast();
   
   const [formData, setFormData] = useState<MaterialFormData>({
     code: '',
@@ -100,6 +101,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
       }
       
       if (result) {
+        success(material ? '物料更新成功' : '物料创建成功');
         onSuccess();
       }
     } catch (error) {
@@ -135,6 +137,9 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
       const timestamp = Date.now().toString().slice(-6);
       const code = `${category.code}-${unit.code}-${timestamp}`;
       setFormData(prev => ({ ...prev, code }));
+      success('编码已自动生成');
+    } else {
+      showError('请先选择物料分类和计量单位');
     }
   };
 

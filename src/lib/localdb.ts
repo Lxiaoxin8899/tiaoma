@@ -9,7 +9,9 @@ const tableKeys = {
   material_batches: KEY_PREFIX + 'material_batches',
   barcodes: KEY_PREFIX + 'barcodes',
   users: KEY_PREFIX + 'users',
-  sessions: KEY_PREFIX + 'sessions'
+  sessions: KEY_PREFIX + 'sessions',
+  system_settings: KEY_PREFIX + 'system_settings',
+  audit_logs: KEY_PREFIX + 'audit_logs'
 }
 
 const nowIso = () => new Date().toISOString()
@@ -24,7 +26,11 @@ const save = (key: string, value: any) => {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
-const uuid = () => (crypto && 'randomUUID' in crypto) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)
+// 说明：用 typeof 保护 crypto，避免在极少数运行环境下触发 ReferenceError
+const uuid = () =>
+  (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36)
 
 export const db = {
   getAll: (table: keyof typeof tableKeys) => load(tableKeys[table]),
@@ -118,7 +124,66 @@ export const seedIfEmpty = () => {
   const users = load(tableKeys.users)
   if (users.length === 0) {
     save(tableKeys.users, [
-      { id: uuid(), email: 'admin@local', username: 'admin', role: 'admin', status: 'active', created_at: nowIso(), updated_at: nowIso() }
+      {
+        id: uuid(),
+        email: 'admin@local',
+        username: 'admin',
+        full_name: '系统管理员',
+        role: 'admin',
+        status: 'active',
+        department: 'IT部门',
+        created_at: nowIso(),
+        updated_at: nowIso()
+      },
+      {
+        id: uuid(),
+        email: 'manager@local',
+        username: 'manager',
+        full_name: '物料经理',
+        role: 'manager',
+        status: 'active',
+        department: '物料管理部',
+        created_at: nowIso(),
+        updated_at: nowIso()
+      },
+      {
+        id: uuid(),
+        email: 'operator@local',
+        username: 'operator',
+        full_name: '仓库操作员',
+        role: 'operator',
+        status: 'active',
+        department: '仓库部',
+        created_at: nowIso(),
+        updated_at: nowIso()
+      }
+    ])
+  }
+  const settings = load(tableKeys.system_settings)
+  if (settings.length === 0) {
+    save(tableKeys.system_settings, [
+      {
+        id: uuid(),
+        site_name: '条码管理系统',
+        company_name: '科技有限公司',
+        timezone: 'Asia/Shanghai',
+        language: 'zh-CN',
+        date_format: 'YYYY-MM-DD',
+        password_min_length: 8,
+        session_timeout: 480,
+        max_login_attempts: 5,
+        two_factor_required: false,
+        email_enabled: true,
+        low_stock_alerts: true,
+        system_maintenance: false,
+        user_activities: true,
+        auto_backup: true,
+        backup_frequency: 'daily',
+        data_retention_days: 365,
+        maintenance_mode: false,
+        created_at: nowIso(),
+        updated_at: nowIso()
+      }
     ])
   }
 }
@@ -127,15 +192,39 @@ export const enrich = {
   material: (m: any) => {
     const units = load(tableKeys.units)
     const cats = load(tableKeys.material_categories)
-    const sups = load(tableKeys.suppliers)
     const unit = units.find((u: any) => u.id === m.unit_id)
     const category = cats.find((c: any) => c.id === m.category_id)
-    const supplier = sups.find((s: any) => s.id === m.supplier_id)
     return {
       ...m,
-      unit: unit ? { id: unit.id, name: unit.name, symbol: unit.symbol } : undefined,
+      // 统一使用 unit_obj 作为联表结果字段，避免与 materials.unit（字符串）混淆
+      unit_obj: unit ? { id: unit.id, code: unit.code, name: unit.name, symbol: unit.symbol } : undefined,
       category: category ? { id: category.id, name: category.name, code: category.code } : undefined,
-      supplier: supplier ? { id: supplier.id, name: supplier.name, code: supplier.code } : undefined
+      // 兼容旧代码：有些地方仍会读取 material.unit（字符串）
+      unit: m.unit ?? unit?.symbol ?? unit?.code ?? unit?.name
+    }
+  },
+  // 批次联表：补齐 batch.material 与 batch.supplier，方便离线列表/条码页展示
+  batch: (b: any) => {
+    const materials = load(tableKeys.materials)
+    const suppliers = load(tableKeys.suppliers)
+    const material = materials.find((m: any) => m.id === b.material_id)
+    const supplier = suppliers.find((s: any) => s.id === b.supplier_id)
+    return {
+      ...b,
+      material: material ? enrich.material(material) : undefined,
+      supplier: supplier ? { ...supplier } : undefined
+    }
+  },
+  // 条码联表：补齐 barcode.material / barcode.batch（如有）
+  barcode: (bc: any) => {
+    const materials = load(tableKeys.materials)
+    const batches = load(tableKeys.material_batches)
+    const material = materials.find((m: any) => m.id === bc.material_id)
+    const batch = batches.find((b: any) => b.id === bc.batch_id)
+    return {
+      ...bc,
+      material: material ? enrich.material(material) : undefined,
+      batch: batch ? enrich.batch(batch) : undefined
     }
   }
 }
@@ -143,4 +232,3 @@ export const enrich = {
 seedIfEmpty()
 
 export default db
-
