@@ -114,6 +114,7 @@ const LabelPrint: React.FC = () => {
   const [showNewBatchForm, setShowNewBatchForm] = useState(false);
   const [newBatchData, setNewBatchData] = useState({
     production_date: new Date().toISOString().split('T')[0],
+    batch_number: '',
     quantity: 1
   });
 
@@ -186,15 +187,6 @@ const LabelPrint: React.FC = () => {
     return { code: '-', name: '-' };
   };
 
-  // 生成批次号
-  const generateBatchNumber = (productionDate: string): string => {
-    const date = new Date(productionDate);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}${month}${day}`;
-  };
-
   // 构建打印数据
   const buildLabelData = (): LabelPrintData | null => {
     if (!selectedMaterial) return null;
@@ -227,7 +219,7 @@ const LabelPrint: React.FC = () => {
 
     // 如果是新建批次模式
     if (showNewBatchForm && !baseData) {
-      const batchNumber = generateBatchNumber(newBatchData.production_date);
+      const batchNumber = newBatchData.batch_number || '';
       // 确保 barcode 数据是字符串类型
       const materialCode = String(selectedMaterial.code || '');
 
@@ -542,8 +534,13 @@ const LabelPrint: React.FC = () => {
   const handleCreateBatch = async () => {
     if (!selectedMaterial) return;
 
+    if (!newBatchData.batch_number.trim()) {
+      showError('请输入批次号');
+      return;
+    }
+
     try {
-      const batchNumber = generateBatchNumber(newBatchData.production_date);
+      const batchNumber = newBatchData.batch_number.trim();
 
       const { createBatch } = useBatchStore.getState();
       const result = await createBatch({
@@ -564,6 +561,12 @@ const LabelPrint: React.FC = () => {
           setSelectedBatchId(newBatch.id);
         }
         setShowNewBatchForm(false);
+        // 重置表单
+        setNewBatchData({
+          production_date: new Date().toISOString().split('T')[0],
+          batch_number: '',
+          quantity: 1
+        });
       }
     } catch (err) {
       console.error('Create batch error:', err);
@@ -1027,13 +1030,14 @@ const LabelPrint: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      生产批号（自动生成）
+                      生产批号
                     </label>
                     <input
                       type="text"
-                      value={generateBatchNumber(newBatchData.production_date)}
-                      readOnly
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
+                      value={newBatchData.batch_number}
+                      onChange={(e) => setNewBatchData(prev => ({ ...prev, batch_number: e.target.value }))}
+                      placeholder="请输入批次号"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
                     />
                   </div>
 
@@ -1107,6 +1111,18 @@ const LabelPrint: React.FC = () => {
                     value={editData.shelf_life ?? labelData.shelf_life ?? ''}
                     onChange={(e) => setEditData(prev => ({ ...prev, shelf_life: e.target.value }))}
                     placeholder={labelData.shelf_life || '如：12个月'}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    开封日期
+                  </label>
+                  <input
+                    type="date"
+                    value={editData.open_date ?? ''}
+                    onChange={(e) => setEditData(prev => ({ ...prev, open_date: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
                   />
                 </div>

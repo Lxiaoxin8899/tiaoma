@@ -6,7 +6,6 @@ import { useMaterialStore } from '@/stores/materialStore'
 import { useSupplierStore } from '@/stores/supplierStore'
 import { BatchFormData, MaterialBatch } from '@/types/database'
 import SearchableSelect from '@/components/common/SearchableSelect'
-import { useToast } from '@/components/common/Toast'
 
 interface BatchFormProps {
   batch?: MaterialBatch | null
@@ -15,10 +14,9 @@ interface BatchFormProps {
 }
 
 const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
-  const { createBatch, updateBatch, generateBatchNumber } = useBatchStore()
+  const { createBatch, updateBatch } = useBatchStore()
   const { materials, fetchMaterials } = useMaterialStore()
   const { suppliers, fetchSuppliers } = useSupplierStore()
-  const { success, error: showError } = useToast()
 
   const [formData, setFormData] = useState<BatchFormData>({
     material_id: batch?.material_id || '',
@@ -33,7 +31,6 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [generatingNumber, setGeneratingNumber] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -64,25 +61,6 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
-  }
-
-  const handleGenerateBatchNumber = async () => {
-    if (!formData.material_id) {
-      showError('生成失败', '请先选择物料')
-      return
-    }
-
-    setGeneratingNumber(true)
-    try {
-      const batchNumber = await generateBatchNumber(formData.material_id)
-      setFormData(prev => ({ ...prev, batch_number: batchNumber }))
-      success('批次号已生成')
-    } catch (error) {
-      console.error('生成批次号失败', error)
-      showError('生成失败', '生成批次号失败')
-    } finally {
-      setGeneratingNumber(false)
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -165,24 +143,14 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 批次号 <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={formData.batch_number}
-                  onChange={(e) => handleInputChange('batch_number', e.target.value)}
-                  placeholder="请输入批次号"
-                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.batch_number ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                />
-                <button
-                  type="button"
-                  onClick={handleGenerateBatchNumber}
-                  disabled={generatingNumber || !formData.material_id}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {generatingNumber ? '生成中...' : '自动生成'}
-                </button>
-              </div>
+              <input
+                type="text"
+                value={formData.batch_number}
+                onChange={(e) => handleInputChange('batch_number', e.target.value)}
+                placeholder="请输入批次号"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.batch_number ? 'border-red-500' : 'border-gray-300'
+                  }`}
+              />
               {errors.batch_number && (
                 <p className="mt-1 text-sm text-red-600">{errors.batch_number}</p>
               )}

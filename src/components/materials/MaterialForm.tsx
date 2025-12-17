@@ -25,11 +25,11 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     description: '',
     min_stock: 0,
     max_stock: 1000,
-    // 标签打印字段
+    // 标签打印字段 - 设置默认值
     weight: '',
-    storage_conditions: '',
-    main_ingredients: '',
-    shelf_life: ''
+    storage_conditions: '存放于阴凉干燥通风处，密封避光',
+    main_ingredients: '食品用香料、食品用香精辅料',
+    shelf_life: '12个月'
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
