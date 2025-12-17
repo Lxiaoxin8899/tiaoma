@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Dialog } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useBatchStore } from '@/stores/batchStore'
 import { useMaterialStore } from '@/stores/materialStore'
 import { useSupplierStore } from '@/stores/supplierStore'
 import { BatchFormData, MaterialBatch } from '@/types/database'
-import { toast } from 'react-hot-toast'
 import SearchableSelect from '@/components/common/SearchableSelect'
+import { useToast } from '@/components/common/Toast'
 
 interface BatchFormProps {
   batch?: MaterialBatch | null
@@ -18,6 +18,7 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
   const { createBatch, updateBatch, generateBatchNumber } = useBatchStore()
   const { materials, fetchMaterials } = useMaterialStore()
   const { suppliers, fetchSuppliers } = useSupplierStore()
+  const { success, error: showError } = useToast()
 
   const [formData, setFormData] = useState<BatchFormData>({
     material_id: batch?.material_id || '',
@@ -67,7 +68,7 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
 
   const handleGenerateBatchNumber = async () => {
     if (!formData.material_id) {
-      toast.error('请先选择物料')
+      showError('生成失败', '请先选择物料')
       return
     }
 
@@ -75,10 +76,10 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
     try {
       const batchNumber = await generateBatchNumber(formData.material_id)
       setFormData(prev => ({ ...prev, batch_number: batchNumber }))
-      toast.success('批次号已生成')
+      success('批次号已生成')
     } catch (error) {
       console.error('生成批次号失败', error)
-      toast.error('生成批次号失败')
+      showError('生成失败', '生成批次号失败')
     } finally {
       setGeneratingNumber(false)
     }

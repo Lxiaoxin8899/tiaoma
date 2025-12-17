@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+﻿import React, { useState, useMemo } from 'react'
 import { Combobox } from '@headlessui/react'
 import { CheckIcon, ChevronUpDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 
@@ -45,7 +45,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
     return (
         <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 {label} {required && <span className="text-red-500">*</span>}
             </label>
             <Combobox value={value} onChange={onChange} disabled={disabled}>
@@ -54,19 +54,19 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                         <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                         <Combobox.Input
                             className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${error ? 'border-red-500' : 'border-gray-300'
-                                } ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                                } ${disabled ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-900'} text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 dark:border-gray-700`}
                             displayValue={() => selectedOption ? `${selectedOption.label}${selectedOption.subtitle ? ` - ${selectedOption.subtitle}` : ''}` : ''}
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder={placeholder}
                         />
                         <Combobox.Button className="absolute right-0 inset-y-0 flex items-center pr-2">
-                            <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                            <ChevronUpDownIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                         </Combobox.Button>
                     </div>
 
-                    <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                    <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-900 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 dark:ring-gray-700 focus:outline-none">
                         {filteredOptions.length === 0 && query !== '' ? (
-                            <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
+                            <div className="relative cursor-default select-none py-2 px-4 text-gray-700 dark:text-gray-200">
                                 未找到匹配项
                             </div>
                         ) : (
@@ -75,7 +75,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                                     key={option.id}
                                     value={option.id}
                                     className={({ active }) =>
-                                        `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                                        `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-gray-100'
                                         }`
                                     }
                                 >
@@ -86,7 +86,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                                                     {option.label}
                                                 </span>
                                                 {option.subtitle && (
-                                                    <span className={`block text-sm truncate ${active ? 'text-blue-200' : 'text-gray-500'}`}>
+                                                    <span className={`block text-sm truncate ${active ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
                                                         {option.subtitle}
                                                     </span>
                                                 )}

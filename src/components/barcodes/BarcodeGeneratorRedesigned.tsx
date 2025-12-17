@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useMaterialStore } from '../../stores/materialStore';
 import { useBatchStore } from '../../stores/batchStore';
 import BarcodeViewer from './BarcodeViewer';

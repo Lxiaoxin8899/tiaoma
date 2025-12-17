@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 const KEY_PREFIX = 'mma_local_'
 
 const tableKeys = {

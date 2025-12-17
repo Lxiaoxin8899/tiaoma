@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+﻿import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useMaterialStore } from '../../stores/materialStore';
 import { useBatchStore } from '../../stores/batchStore';
 import { PrinterIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';

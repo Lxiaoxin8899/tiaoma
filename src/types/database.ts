@@ -1,4 +1,4 @@
-// 数据库类型定义
+﻿// 数据库类型定义
 export interface Material {
   id: string;
   code: string;
@@ -13,6 +13,11 @@ export interface Material {
   max_stock: number;
   current_stock: number;
   price?: number;
+  // 标签打印相关字段
+  weight?: string;              // 重量（如 "0.18KG"）
+  storage_conditions?: string;  // 储存条件
+  main_ingredients?: string;    // 主要成份
+  shelf_life?: string;          // 保质期（如 "12个月"）
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -123,6 +128,11 @@ export interface MaterialFormData {
   max_stock: number;
   description?: string;
   status?: 'active' | 'inactive' | 'discontinued';
+  // 标签打印相关字段
+  weight?: string;
+  storage_conditions?: string;
+  main_ingredients?: string;
+  shelf_life?: string;
 }
 
 // 查询参数类型
@@ -351,4 +361,27 @@ export interface AuditLogQueryParams extends QueryParams {
   module?: string;
   start_date?: string;
   end_date?: string;
+}
+
+// 标签打印数据类型
+export interface LabelPrintData {
+  // 公司信息
+  company_name: string;
+  // 供应商信息
+  supplier_code: string;
+  supplier_name?: string;
+  // 产品信息
+  product_name: string;
+  product_code: string;
+  weight?: string;
+  storage_conditions?: string;
+  main_ingredients?: string;
+  shelf_life?: string;
+  // 批次信息
+  production_date?: string;
+  batch_number: string;
+  open_date?: string;  // 开封日期（通常为空，手填）
+  // 条码
+  material_barcode: string;  // 材料条形码（基于物料编码）
+  batch_barcode: string;     // 材料批次码（基于批次号）
 }

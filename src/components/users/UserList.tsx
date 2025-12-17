@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   PencilIcon,
   TrashIcon,
@@ -160,8 +160,8 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
       {/* 页面头部 */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">用户管理</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">用户管理</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             管理系统用户账户、角色和权限
           </p>
         </div>
@@ -177,17 +177,17 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
       </div>
 
       {/* 搜索和筛选 */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="搜索用户姓名、邮箱或用户名..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -196,7 +196,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
             <select
               value={selectedRole}
               onChange={(e) => handleRoleFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">所有角色</option>
               <option value="admin">管理员</option>
@@ -208,7 +208,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
             <select
               value={selectedStatus}
               onChange={(e) => handleStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">所有状态</option>
               <option value="active">活跃</option>
@@ -218,7 +218,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
             <button
               type="button"
               onClick={handleRefresh}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center space-x-1 transition-colors"
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg flex items-center space-x-1 transition-colors"
             >
               <ArrowPathIcon className="h-5 w-5" />
             </button>
@@ -228,59 +228,59 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
 
       {/* 错误提示 */}
       {storeError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{storeError}</p>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-200">{storeError}</p>
         </div>
       )}
 
       {/* 用户列表 */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             用户列表 ({totalItems})
           </h3>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   用户
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   角色
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   部门
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   状态
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   最后登录
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   操作
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <UserIcon className="h-6 w-6 text-gray-600" />
+                        <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                          <UserIcon className="h-6 w-6 text-gray-600 dark:text-gray-200" />
                         </div>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {user.full_name || user.username}
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <EnvelopeIcon className="h-4 w-4 mr-1" />
+                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                          <EnvelopeIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
                           {user.email}
                         </div>
                       </div>
@@ -288,7 +288,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <ShieldCheckIcon className="h-4 w-4 text-gray-400 mr-2" />
+                      <ShieldCheckIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
                       <StatusBadge
                         status={user.role}
                         color={getRoleColor(user.role)}
@@ -298,8 +298,8 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <BuildingOfficeIcon className="h-4 w-4 text-gray-400 mr-2" />
+                    <div className="flex items-center text-sm text-gray-900 dark:text-gray-100">
+                      <BuildingOfficeIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
                       {user.department || '未设置'}
                     </div>
                   </td>
@@ -311,7 +311,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
                       size="sm"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {user.last_login_at ? 
                       new Date(user.last_login_at).toLocaleDateString('zh-CN') : 
                       '从未登录'
@@ -322,7 +322,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
                       {hasPermission('write_users') && (
                         <button
                           onClick={() => handleEdit(user)}
-                          className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-200 p-1 rounded transition-colors"
                           title="编辑用户"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -331,7 +331,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
                       {hasPermission('delete_users') && user.id !== currentUser?.id && (
                         <button
                           onClick={() => handleDelete(user)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
+                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1 rounded transition-colors"
                           title="删除用户"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -347,9 +347,9 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
 
         {users.length === 0 && !loading && (
           <div className="text-center py-12">
-            <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">没有找到用户</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <UserIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">没有找到用户</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {searchTerm || selectedRole || selectedStatus ?
                 '请尝试调整搜索条件' :
                 '还没有用户数据'

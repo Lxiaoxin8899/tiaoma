@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   ClockIcon,
   UserIcon,
@@ -61,9 +61,9 @@ const AuditLogList: React.FC<AuditLogListProps> = ({ logs, loading = false }) =>
     if (!details || Object.keys(details).length === 0) return null;
 
     return (
-      <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-        <div className="font-medium text-gray-600 mb-1">详细信息:</div>
-        <pre className="text-gray-700 whitespace-pre-wrap">
+      <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
+        <div className="font-medium text-gray-600 dark:text-gray-300 mb-1">详细信息:</div>
+        <pre className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
           {JSON.stringify(details, null, 2)}
         </pre>
       </div>
@@ -72,10 +72,10 @@ const AuditLogList: React.FC<AuditLogListProps> = ({ logs, loading = false }) =>
 
   if (loading) {
     return (
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm rounded-lg overflow-hidden">
         <div className="p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">加载中...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">加载中...</p>
         </div>
       </div>
     );
@@ -83,64 +83,64 @@ const AuditLogList: React.FC<AuditLogListProps> = ({ logs, loading = false }) =>
 
   if (!logs || logs.length === 0) {
     return (
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm rounded-lg overflow-hidden">
         <div className="p-8 text-center">
           <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto" />
-          <p className="mt-4 text-gray-600">暂无操作日志</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">暂无操作日志</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
                 时间
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
                 用户
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
                 操作
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
                 模块
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
                 目标
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
                 IP 地址
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
             {logs.map((log) => (
-              <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
+                  <div className="flex items-center text-sm text-gray-900 dark:text-gray-100">
                     <ClockIcon className="h-4 w-4 text-gray-400 mr-2" />
                     {formatDateTime(log.created_at)}
                   </div>
@@ -149,7 +149,7 @@ const AuditLogList: React.FC<AuditLogListProps> = ({ logs, loading = false }) =>
                   <div className="flex items-center">
                     <UserIcon className="h-4 w-4 text-gray-400 mr-2" />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {log.user_name}
                       </div>
                     </div>
@@ -162,23 +162,23 @@ const AuditLogList: React.FC<AuditLogListProps> = ({ logs, loading = false }) =>
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
+                  <div className="flex items-center text-sm text-gray-900 dark:text-gray-100">
                     <CubeIcon className="h-4 w-4 text-gray-400 mr-2" />
                     {moduleLabels[log.module]}
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
                     {log.target_name || '-'}
                     {log.target_id && (
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         ID: {log.target_id}
                       </div>
                     )}
                     {log.details && formatDetails(log.details)}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   {log.ip_address || '-'}
                 </td>
               </tr>

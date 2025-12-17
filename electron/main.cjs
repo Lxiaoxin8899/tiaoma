@@ -1,8 +1,16 @@
-const { app, BrowserWindow, Menu } = require('electron')
+﻿const { app, BrowserWindow, Menu } = require('electron')
 const path = require('path')
 
 // 禁用硬件加速（解决某些 Windows 显示问题）
 // app.disableHardwareAcceleration()
+
+// 说明：主进程兜底错误捕获，避免出现“闪退无提示”
+process.on('uncaughtException', (err) => {
+  console.error('[主进程未捕获异常]', err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[主进程未处理 Promise Rejection]', reason)
+})
 
 let mainWindow
 
@@ -47,7 +55,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 768,
-    title: '条码管理系统',
+    title: '物料与条码管理系统',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -170,8 +178,8 @@ function createMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: '关于',
-              message: '条码管理系统',
-              detail: '版本: 1.0.0\n基于 Electron + React + Vite 构建'
+              message: '物料与条码管理系统',
+              detail: `版本: ${app.getVersion()}\n基于 Electron + React + Vite 构建`
             })
           }
         }

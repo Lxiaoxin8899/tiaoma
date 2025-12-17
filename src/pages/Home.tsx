@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+﻿import { Navigate } from 'react-router-dom'
 
 export default function Home() {
   return <Navigate to="/dashboard" replace />

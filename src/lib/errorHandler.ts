@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 错误处理工具类
  * 提供统一的错误处理、报告和格式化功能
  */
@@ -116,8 +116,9 @@ export class ErrorHandler {
       message: appError.message,
       details: appError.details,
       stack: error instanceof Error ? error.stack : undefined,
-      userAgent: navigator.userAgent,
-      url: window.location.href,
+      // 说明：做运行环境保护，避免在极端场景（如测试/SSR）下二次报错
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      url: typeof window !== 'undefined' ? window.location.href : '',
       context: {
         context,
         ...additionalContext
@@ -164,8 +165,8 @@ export class ErrorHandler {
       timestamp: new Date().toISOString(),
       level: 'warning',
       message,
-      userAgent: navigator.userAgent,
-      url: window.location.href,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      url: typeof window !== 'undefined' ? window.location.href : '',
       context: {
         context,
         ...additionalContext
@@ -188,8 +189,8 @@ export class ErrorHandler {
       timestamp: new Date().toISOString(),
       level: 'info',
       message,
-      userAgent: navigator.userAgent,
-      url: window.location.href,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      url: typeof window !== 'undefined' ? window.location.href : '',
       context: {
         context,
         ...additionalContext

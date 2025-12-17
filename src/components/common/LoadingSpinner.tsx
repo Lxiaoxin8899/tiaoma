@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -19,8 +19,8 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <div className={`flex flex-col items-center justify-center p-8 ${className}`}>
-      <div className={`animate-spin rounded-full border-4 border-gray-200 border-t-blue-600 ${sizeClasses[size]}`} />
-      {text && <p className="mt-2 text-gray-600 text-sm">{text}</p>}
+      <div className={`animate-spin rounded-full border-4 border-gray-200 border-t-blue-600 dark:border-gray-700 dark:border-t-blue-400 ${sizeClasses[size]}`} />
+      {text && <p className="mt-2 text-gray-600 dark:text-gray-300 text-sm">{text}</p>}
     </div>
   );
 };

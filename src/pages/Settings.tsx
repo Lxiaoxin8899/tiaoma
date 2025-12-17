@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   ShieldCheckIcon,
   BellIcon,
@@ -12,6 +12,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import SettingsForm from '../components/settings/SettingsForm';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
+import { useTheme } from '../hooks/useTheme';
 import type { SystemSettingsFormData } from '../types/database';
 
 interface SettingsPageProps {
@@ -21,6 +22,7 @@ interface SettingsPageProps {
 const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
   const { hasPermission } = useAuthStore();
   const { settings, loading, error: storeError, fetchSettings, updateSettings, clearError } = useSettingsStore();
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('general');
@@ -207,41 +209,73 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
       {/* 页面头部 */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">系统设置</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">系统设置</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             配置系统参数和安全策略
           </p>
         </div>
-        {hasPermission('write_settings') && (
-          <div className="flex items-center space-x-2">
-            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
-            <span className="text-sm text-yellow-700">修改设置需要管理员权限</span>
+        <div className="flex items-center gap-6">
+          {/* 说明：主题偏好仅保存在本地（localStorage），不影响其他用户/设备 */}
+          <div className="hidden sm:flex flex-col items-end">
+            <div className="text-xs text-gray-500 dark:text-gray-400">界面主题（本地）</div>
+            <div className="mt-1 inline-flex rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1">
+              {([
+                { value: 'auto', label: '自动' },
+                { value: 'light', label: '亮色' },
+                { value: 'dark', label: '暗色' },
+              ] as const).map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setTheme(item.value)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    theme === item.value
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800'
+                  }`}
+                  title={
+                    item.value === 'auto'
+                      ? `跟随系统（当前：${resolvedTheme === 'dark' ? '暗色' : '亮色'}）`
+                      : undefined
+                  }
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+
+          {hasPermission('write_settings') && (
+            <div className="flex items-center space-x-2">
+              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
+              <span className="text-sm text-yellow-700 dark:text-yellow-200">修改设置需要管理员权限</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 状态消息 */}
       {storeError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <div className="flex items-center">
             <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2" />
-            <p className="text-red-800">{storeError}</p>
+            <p className="text-red-800 dark:text-red-200">{storeError}</p>
           </div>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
           <div className="flex items-center">
             <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
-            <p className="text-green-800">{success}</p>
+            <p className="text-green-800 dark:text-green-200">{success}</p>
           </div>
         </div>
       )}
 
       {/* 选项卡导航 */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="border-b border-gray-200 dark:border-gray-800">
           <nav className="flex space-x-8 px-6">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -251,8 +285,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-300'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-700'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -266,10 +300,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
         {/* 选项卡内容 */}
         <div className="p-6">
           <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
               {tabs.find(tab => tab.id === activeTab)?.name}
             </h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {tabs.find(tab => tab.id === activeTab)?.description}
             </p>
           </div>
@@ -279,13 +313,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
             {configCategories[activeTab]?.map((item) => (
               <div
                 key={item.key}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
               >
                 <div className="flex-1">
-                  <h4 className="text-sm font-medium text-gray-900">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {item.label}
                   </h4>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {getStatusText(activeTab, item.key)}
                   </p>
                 </div>
@@ -299,7 +333,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
                   {hasPermission('write_settings') && (
                     <button
                       onClick={() => handleEditConfig()}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200 text-sm font-medium"
                     >
                       编辑
                     </button>
@@ -323,10 +357,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
 
       {/* 权限提示 */}
       {!hasPermission('read_settings') && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-          <ShieldCheckIcon className="mx-auto h-12 w-12 text-yellow-400" />
-          <h3 className="mt-2 text-sm font-medium text-yellow-800">权限不足</h3>
-          <p className="mt-1 text-sm text-yellow-700">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+          <ShieldCheckIcon className="mx-auto h-12 w-12 text-yellow-400 dark:text-yellow-300" />
+          <h3 className="mt-2 text-sm font-medium text-yellow-800 dark:text-yellow-200">权限不足</h3>
+          <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-200">
             您没有权限查看系统设置
           </p>
         </div>

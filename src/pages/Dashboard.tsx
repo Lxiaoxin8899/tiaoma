@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   CubeIcon, 
@@ -57,7 +57,8 @@ const Dashboard: React.FC = () => {
       value: stats?.total_categories || 0,
       icon: ArchiveBoxIcon,
       color: 'purple',
-      href: '/materials/categories'
+      // 说明：当前未实现独立的分类路由，避免跳转 404，先统一回到物料管理页
+      href: '/materials'
     }
   ];
 
@@ -76,10 +77,10 @@ const Dashboard: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       {/* 欢迎信息 */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           欢迎回来，{user?.full_name || user?.username || '用户'}！
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-300">
           {user?.role === 'admin' ? '管理员' : 
            user?.role === 'manager' ? '经理' :
            user?.role === 'operator' ? '操作员' : '查看者'} · 
@@ -98,15 +99,15 @@ const Dashboard: React.FC = () => {
           <Link
             key={card.name}
             to={card.href}
-            className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-800 p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center">
               <div className={`p-3 rounded-lg ${colorClasses[card.color as keyof typeof colorClasses]}`}>
                 <card.icon className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{card.name}</p>
-                <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{card.name}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
               </div>
             </div>
           </Link>
@@ -115,9 +116,9 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* 低库存警告 */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-800">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
               <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2" />
               低库存警告
             </h3>
@@ -126,16 +127,16 @@ const Dashboard: React.FC = () => {
             {getLowStockMaterials().length > 0 ? (
               <div className="space-y-3">
                 {getLowStockMaterials().map((material) => (
-                  <div key={material.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                  <div key={material.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">{material.name}</p>
-                      <p className="text-sm text-gray-600">{material.code}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{material.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{material.code}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-red-600">
                         {material.current_stock} / {material.min_stock}
                       </p>
-                      <p className="text-xs text-gray-500">当前/最小库存</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">当前/最小库存</p>
                     </div>
                   </div>
                 ))}
@@ -147,16 +148,16 @@ const Dashboard: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="text-gray-600">暂无低库存物料</p>
+                <p className="text-gray-600 dark:text-gray-300">暂无低库存物料</p>
               </div>
             )}
           </div>
         </div>
 
         {/* 最近添加的物料 */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-800">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
               <ClockIcon className="h-5 w-5 text-blue-500 mr-2" />
               最近添加的物料
             </h3>
@@ -165,10 +166,10 @@ const Dashboard: React.FC = () => {
             {getRecentMaterials().length > 0 ? (
               <div className="space-y-3">
                 {getRecentMaterials().map((material) => (
-                  <div key={material.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={material.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">{material.name}</p>
-                      <p className="text-sm text-gray-600">{material.code}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{material.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{material.code}</p>
                     </div>
                     <div className="text-right">
                       <StatusBadge 
@@ -177,7 +178,7 @@ const Dashboard: React.FC = () => {
                         text={material.status === 'active' ? '可用' : material.status === 'inactive' ? '停用' : '报废'}
                         size="sm"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {new Date(material.created_at).toLocaleDateString('zh-CN')}
                       </p>
                     </div>
@@ -189,7 +190,7 @@ const Dashboard: React.FC = () => {
                 <div className="text-gray-400 mb-2">
                   <CubeIcon className="h-12 w-12 mx-auto" />
                 </div>
-                <p className="text-gray-600">暂无物料数据</p>
+                <p className="text-gray-600 dark:text-gray-300">暂无物料数据</p>
               </div>
             )}
           </div>
@@ -198,49 +199,49 @@ const Dashboard: React.FC = () => {
 
       {/* 快速操作 */}
       {hasRole('operator') && (
-        <div className="mt-8 bg-white rounded-lg shadow-sm border">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">快速操作</h3>
+        <div className="mt-8 bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-800">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">快速操作</h3>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Link
                 to="/materials"
-                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 <div className="text-center">
                   <CubeIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">新建物料</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">新建物料</p>
                 </div>
               </Link>
               
               <Link
                 to="/batches"
-                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 <div className="text-center">
                   <ArchiveBoxIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">新建批次</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">新建批次</p>
                 </div>
               </Link>
               
               <Link
                 to="/barcodes"
-                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 <div className="text-center">
                   <QrCodeIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">生成条码</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">生成条码</p>
                 </div>
               </Link>
               
               <Link
                 to="/analytics"
-                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 <div className="text-center">
                   <ChartBarIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">查看报表</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">查看报表</p>
                 </div>
               </Link>
             </div>

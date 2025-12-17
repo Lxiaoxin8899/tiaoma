@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import BatchList from '@/components/batches/BatchList'
 import { useAuthStore } from '@/stores/authStore'
 

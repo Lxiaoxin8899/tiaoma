@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import BarcodeGeneratorRedesigned from '@/components/barcodes/BarcodeGeneratorRedesigned'
 import { useAuthStore } from '@/stores/authStore'
 

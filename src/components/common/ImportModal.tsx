@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { XMarkIcon, ArrowUpTrayIcon, DocumentArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { parseExcelFile, ImportError, ImportResult } from '../../lib/importUtils';
+import { notify } from '../../lib/notify';
 
 export interface ImportModalProps {
   title: string;
@@ -44,7 +45,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
       // 切换到预览步骤
       setCurrentStep('preview');
     } catch (error) {
-      alert('解析文件失败：' + (error instanceof Error ? error.message : '未知错误'));
+      notify.error('解析文件失败', error instanceof Error ? error.message : '未知错误');
     } finally {
       setIsUploading(false);
     }
@@ -68,14 +69,14 @@ const ImportModal: React.FC<ImportModalProps> = ({
     if (droppedFile && (droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
       handleFileChange(droppedFile);
     } else {
-      alert('请上传 Excel 文件（.xlsx 或 .xls）');
+      notify.warning('文件格式不支持', '请上传 Excel 文件（.xlsx 或 .xls）');
     }
   };
 
   // 处理导入
   const handleImport = async () => {
     if (!validationResult || validationResult.validData.length === 0) {
-      alert('没有有效数据可以导入');
+      notify.warning('没有可导入的数据', '请先上传并校验文件');
       return;
     }
 
@@ -86,7 +87,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
       setImportResult(result);
       setCurrentStep('result');
     } catch (error) {
-      alert('导入失败：' + (error instanceof Error ? error.message : '未知错误'));
+      notify.error('导入失败', error instanceof Error ? error.message : '未知错误');
     } finally {
       setIsUploading(false);
     }
@@ -115,16 +116,16 @@ const ImportModal: React.FC<ImportModalProps> = ({
 
     return (
       <div className="mt-4 max-h-64 overflow-auto">
-        <h4 className="text-sm font-medium text-red-800 mb-2">验证错误（{errors.length} 个）</h4>
+        <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">验证错误（{errors.length} 个）</h4>
         <div className="space-y-2">
           {Object.entries(errorsByRow).map(([row, rowErrors]) => (
-            <div key={row} className="bg-red-50 border border-red-200 rounded-md p-3">
-              <div className="font-medium text-red-900 mb-1">第 {row} 行：</div>
-              <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+            <div key={row} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+              <div className="font-medium text-red-900 dark:text-red-100 mb-1">第 {row} 行：</div>
+              <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-200 space-y-1">
                 {rowErrors.map((error, idx) => (
                   <li key={idx}>
                     <span className="font-medium">{error.field}:</span> {error.message}
-                    {error.value && <span className="text-red-600"> (值: {String(error.value)})</span>}
+                    {error.value && <span className="text-red-600 dark:text-red-300"> (值: {String(error.value)})</span>}
                   </li>
                 ))}
               </ul>
@@ -140,7 +141,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* 背景遮罩 */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-gray-900/70 transition-opacity"
           onClick={onClose}
         ></div>
 
@@ -150,14 +151,14 @@ const ImportModal: React.FC<ImportModalProps> = ({
         </span>
 
         {/* 模态框内容 */}
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-900 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-gray-200 dark:border-gray-800">
           {/* 头部 */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -165,16 +166,16 @@ const ImportModal: React.FC<ImportModalProps> = ({
           </div>
 
           {/* 内容区域 */}
-          <div className="bg-white px-6 py-6">
+          <div className="bg-white dark:bg-gray-900 px-6 py-6">
             {/* 步骤 1: 上传文件 */}
             {currentStep === 'upload' && (
               <div>
                 <div className="mb-4">
                   <button
                     onClick={onDownloadTemplate}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
                   >
-                    <DocumentArrowDownIcon className="h-5 w-5 mr-2 text-gray-500" />
+                    <DocumentArrowDownIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
                     下载导入模板
                   </button>
                 </div>
@@ -182,17 +183,17 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 <div
                   className={`mt-4 border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
                     isDragging
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 hover:border-gray-400 dark:border-gray-700 dark:hover:border-gray-500'
                   }`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <ArrowUpTrayIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <ArrowUpTrayIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                   <div className="mt-4">
                     <label htmlFor="file-upload" className="cursor-pointer">
-                      <span className="mt-2 block text-sm font-medium text-gray-900">
+                      <span className="mt-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                         拖拽文件到此处，或
                         <span className="text-blue-600 hover:text-blue-500"> 点击选择文件</span>
                       </span>
@@ -206,14 +207,14 @@ const ImportModal: React.FC<ImportModalProps> = ({
                         onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                       />
                     </label>
-                    <p className="mt-1 text-xs text-gray-500">支持 .xlsx 和 .xls 格式</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">支持 .xlsx 和 .xls 格式</p>
                   </div>
                 </div>
 
                 {isUploading && (
                   <div className="mt-4 text-center">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <p className="mt-2 text-sm text-gray-600">正在解析文件...</p>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">正在解析文件...</p>
                   </div>
                 )}
               </div>
@@ -225,8 +226,8 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <h4 className="text-base font-medium text-gray-900">数据预览</h4>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <h4 className="text-base font-medium text-gray-900 dark:text-gray-100">数据预览</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         共 {validationResult.totalRows} 行数据，
                         <span className="text-green-600 font-medium">{validationResult.validData.length} 行有效</span>
                         {validationResult.errors.length > 0 && (
@@ -238,7 +239,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                     </div>
                     <button
                       onClick={handleReset}
-                      className="text-sm text-gray-600 hover:text-gray-900"
+                      className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
                     >
                       重新上传
                     </button>
@@ -246,11 +247,11 @@ const ImportModal: React.FC<ImportModalProps> = ({
 
                   {/* 错误信息 */}
                   {validationResult.errors.length > 0 && (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 mb-4">
                       <div className="flex">
-                        <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
+                        <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400 dark:text-yellow-300" />
                         <div className="ml-3 flex-1">
-                          <p className="text-sm text-yellow-700">
+                          <p className="text-sm text-yellow-700 dark:text-yellow-200">
                             检测到 {validationResult.errors.length} 个数据错误，这些行将被跳过。
                             {validationResult.validData.length > 0 && '您可以继续导入有效数据。'}
                           </p>
@@ -262,34 +263,34 @@ const ImportModal: React.FC<ImportModalProps> = ({
 
                   {/* 有效数据预览 */}
                   {validationResult.validData.length > 0 && (
-                    <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
                       <div className="overflow-x-auto max-h-96">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50 sticky top-0">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                          <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
                             <tr>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                 #
                               </th>
                               {templateFields.map(field => (
                                 <th
                                   key={field}
-                                  className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                  className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                                 >
                                   {field}
                                 </th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                             {validationResult.validData.slice(0, 10).map((row, idx) => (
                               <tr key={idx}>
-                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {idx + 1}
                                 </td>
                                 {templateFields.map(field => (
                                   <td
                                     key={field}
-                                    className="px-3 py-2 whitespace-nowrap text-sm text-gray-900"
+                                    className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100"
                                   >
                                     {String((row as Record<string, unknown>)[field] || '-')}
                                   </td>
@@ -300,7 +301,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                         </table>
                       </div>
                       {validationResult.validData.length > 10 && (
-                        <div className="bg-gray-50 px-4 py-2 text-sm text-gray-500 text-center">
+                        <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                           仅显示前 10 条数据，共 {validationResult.validData.length} 条
                         </div>
                       )}
@@ -327,13 +328,13 @@ const ImportModal: React.FC<ImportModalProps> = ({
                   )}
                 </div>
 
-                <h4 className="text-xl font-medium text-gray-900 mb-4">导入完成</h4>
+                <h4 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-4">导入完成</h4>
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
                     成功导入：<span className="text-green-600 font-medium text-lg">{importResult.success}</span> 条
                   </p>
                   {importResult.failed > 0 && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       导入失败：<span className="text-red-600 font-medium text-lg">{importResult.failed}</span> 条
                     </p>
                   )}
@@ -343,12 +344,12 @@ const ImportModal: React.FC<ImportModalProps> = ({
           </div>
 
           {/* 底部按钮 */}
-          <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+          <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 flex justify-end space-x-3 border-t border-gray-200 dark:border-gray-800">
             {currentStep === 'preview' && (
               <>
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
                 >
                   取消
                 </button>

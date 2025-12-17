@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { 
   ChevronLeftIcon, 
   ChevronRightIcon,
@@ -68,7 +68,7 @@ const Pagination: React.FC<PaginationProps> = ({
         {showFirstLast && currentPage > 1 && (
           <button
             onClick={() => handlePageClick(1)}
-            className="px-2 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-2 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={currentPage === 1}
             title="首页"
           >
@@ -80,7 +80,7 @@ const Pagination: React.FC<PaginationProps> = ({
         {showPrevNext && (
           <button
             onClick={() => handlePageClick(currentPage - 1)}
-            className="px-2 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-2 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={currentPage === 1}
             title="上一页"
           >
@@ -98,7 +98,7 @@ const Pagination: React.FC<PaginationProps> = ({
               ${
                 page === currentPage
                   ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700'
               }
             `}
           >
@@ -110,7 +110,7 @@ const Pagination: React.FC<PaginationProps> = ({
         {showPrevNext && (
           <button
             onClick={() => handlePageClick(currentPage + 1)}
-            className="px-2 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-2 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={currentPage === totalPages}
             title="下一页"
           >
@@ -122,7 +122,7 @@ const Pagination: React.FC<PaginationProps> = ({
         {showFirstLast && currentPage < totalPages && (
           <button
             onClick={() => handlePageClick(totalPages)}
-            className="px-2 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-2 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={currentPage === totalPages}
             title="尾页"
           >
@@ -133,7 +133,7 @@ const Pagination: React.FC<PaginationProps> = ({
       
       {/* 附加信息和控制 */}
       {(totalItems !== undefined || pageSize !== undefined) && (
-        <div className="mt-4 sm:mt-0 flex items-center text-sm text-gray-500 space-x-4">
+        <div className="mt-4 sm:mt-0 flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
           {totalItems !== undefined && (
             <span>共 {totalItems} 条记录</span>
           )}
@@ -143,7 +143,7 @@ const Pagination: React.FC<PaginationProps> = ({
               <select
                 value={pageSize}
                 onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="block w-full pl-2 pr-8 py-1 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                className="block w-full pl-2 pr-8 py-1 text-base border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>

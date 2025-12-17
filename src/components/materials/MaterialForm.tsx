@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useMaterialStore } from '../../stores/materialStore';
@@ -24,7 +24,12 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     status: 'active',
     description: '',
     min_stock: 0,
-    max_stock: 1000
+    max_stock: 1000,
+    // 标签打印字段
+    weight: '',
+    storage_conditions: '',
+    main_ingredients: '',
+    shelf_life: ''
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,7 +52,12 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
         status: material.status,
         description: material.description || '',
         min_stock: material.min_stock,
-        max_stock: material.max_stock
+        max_stock: material.max_stock,
+        // 标签打印字段
+        weight: material.weight || '',
+        storage_conditions: material.storage_conditions || '',
+        main_ingredients: material.main_ingredients || '',
+        shelf_life: material.shelf_life || ''
       });
     }
   }, [material]);
@@ -148,8 +158,8 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-lg shadow-xl">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-lg shadow-xl max-h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
             <Dialog.Title className="text-lg font-semibold text-gray-900">
               {material ? '编辑物料' : '新建物料'}
             </Dialog.Title>
@@ -161,7 +171,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* 基本信息 */}
               <div className="md:col-span-2">
@@ -321,6 +331,71 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
                 {errors.max_stock && <p className="mt-1 text-sm text-red-600">{errors.max_stock}</p>}
               </div>
 
+              {/* 标签打印信息 */}
+              <div className="md:col-span-2">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">标签打印信息</h3>
+              </div>
+
+              <div>
+                <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-1">
+                  重量
+                </label>
+                <input
+                  type="text"
+                  id="weight"
+                  name="weight"
+                  value={formData.weight}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="如：0.18KG"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="shelf_life" className="block text-sm font-medium text-gray-700 mb-1">
+                  保质期
+                </label>
+                <input
+                  type="text"
+                  id="shelf_life"
+                  name="shelf_life"
+                  value={formData.shelf_life}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="如：12个月"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label htmlFor="storage_conditions" className="block text-sm font-medium text-gray-700 mb-1">
+                  储存条件
+                </label>
+                <input
+                  type="text"
+                  id="storage_conditions"
+                  name="storage_conditions"
+                  value={formData.storage_conditions}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="如：存放于阴凉干燥通风处，密封避光"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label htmlFor="main_ingredients" className="block text-sm font-medium text-gray-700 mb-1">
+                  主要成份
+                </label>
+                <textarea
+                  id="main_ingredients"
+                  name="main_ingredients"
+                  rows={2}
+                  value={formData.main_ingredients}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="如：食品用香料、食品用香精辅料"
+                />
+              </div>
+
               {/* 状态设置 */}
               <div className="md:col-span-2">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">状态设置</h3>
@@ -368,7 +443,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6 sticky bottom-0 bg-white">
               <button
                 type="button"
                 onClick={onClose}

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
+import path from 'path';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -14,8 +15,8 @@ export default defineConfig(({ mode }) => {
   // 生产环境默认不输出 sourcemap，避免源码泄露；如需排查问题可显式开启
   const enableSourceMap = env.VITE_SOURCEMAP === 'true';
 
-  // 默认保持“单文件”以降低 Electron file:// 加载复杂度；如需优化首屏可开启代码分割
-  const enableCodeSplitting = env.VITE_ENABLE_CODE_SPLITTING === 'true';
+  // 默认开启代码分割以改善首屏性能；如需保持“单文件”（例如排查 file:// 兼容性）可显式设置为 false
+  const enableCodeSplitting = env.VITE_ENABLE_CODE_SPLITTING !== 'false';
 
   // 生产环境默认不注入第三方徽标（避免不必要的外链与合规风险）
   const enableTraeBadge = env.VITE_ENABLE_TRAE_BADGE === 'true';
@@ -46,20 +47,49 @@ export default defineConfig(({ mode }) => {
 
   return {
     base,
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
     build: {
       sourcemap: enableSourceMap ? 'hidden' : false,
       // 确保资源路径正确
       assetsDir: 'assets',
-      // 禁用代码分割（输出单一 chunk），简化 Electron 加载；开启后由 Vite/Rollup 默认策略分块
-      ...(enableCodeSplitting
-        ? {}
-        : {
-            rollupOptions: {
-              output: {
-                manualChunks: undefined,
+      // 说明：开启代码分割后对常用大依赖做分组，降低首屏 chunk 体积
+      rollupOptions: enableCodeSplitting
+        ? {
+            output: {
+              manualChunks: (id) => {
+                // 说明：Windows 下路径可能包含反斜杠，这里做一次归一化，避免规则失效
+                const normalizedId = id.replace(/\\/g, '/');
+                if (!normalizedId.includes('/node_modules/')) return undefined;
+
+                // React 核心与路由：严格匹配包路径，避免把 “xxx-react” 类库误归到 react chunk 里
+                if (normalizedId.includes('/node_modules/react/')) return 'vendor-react';
+                if (normalizedId.includes('/node_modules/react-dom/')) return 'vendor-react';
+                if (normalizedId.includes('/node_modules/react-router/')) return 'vendor-router';
+                if (normalizedId.includes('/node_modules/react-router-dom/')) return 'vendor-router';
+
+                // UI/图标类：独立出来，减少核心 chunk 体积
+                if (normalizedId.includes('/node_modules/@headlessui/')) return 'vendor-ui';
+                if (normalizedId.includes('/node_modules/@heroicons/')) return 'vendor-ui';
+                if (normalizedId.includes('/node_modules/lucide-react/')) return 'vendor-ui';
+                if (normalizedId.includes('/node_modules/react-hot-toast/')) return 'vendor-ui';
+
+                if (normalizedId.includes('/node_modules/@supabase/')) return 'vendor-supabase';
+                if (normalizedId.includes('/node_modules/recharts/') || normalizedId.includes('/node_modules/d3-')) return 'vendor-charts';
+                if (normalizedId.includes('/node_modules/xlsx/') || normalizedId.includes('/node_modules/file-saver/')) return 'vendor-export';
+                return 'vendor';
               },
             },
-          }),
+          }
+        : {
+            output: {
+              // 说明：显式禁用手动分包策略，便于输出尽可能少的 chunk
+              manualChunks: undefined,
+            },
+          },
     },
     plugins,
   };

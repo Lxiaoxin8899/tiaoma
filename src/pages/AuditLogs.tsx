@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -45,13 +45,13 @@ const AuditLogs: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="text-gray-400 mb-2">
+          <div className="text-gray-400 dark:text-gray-500 mb-2">
             <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">权限不足</h3>
-          <p className="text-gray-500">您没有查看操作日志的权限</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">权限不足</h3>
+          <p className="text-gray-500 dark:text-gray-400">您没有查看操作日志的权限</p>
         </div>
       </div>
     );
@@ -118,20 +118,20 @@ const AuditLogs: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* 页面标题 */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">操作日志</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">操作日志</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
           查看系统操作审计记录（仅管理员可访问）
         </p>
       </div>
 
       {/* 工具栏 */}
-      <div className="bg-white shadow-sm rounded-lg p-4 mb-6">
+      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-lg p-4 mb-6 border border-gray-200 dark:border-gray-800">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* 搜索栏 */}
           <form onSubmit={handleSearch} className="flex-1">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
               </div>
               <input
                 type="text"
@@ -139,7 +139,7 @@ const AuditLogs: React.FC = () => {
                 onChange={(e) =>
                   setFilters({ ...filters, search: e.target.value })
                 }
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md leading-5 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="搜索用户名、目标名称、操作类型或模块..."
               />
             </div>
@@ -151,8 +151,8 @@ const AuditLogs: React.FC = () => {
               onClick={() => setShowFilters(!showFilters)}
               className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition-colors ${
                 showFilters
-                  ? 'border-blue-600 text-blue-600 bg-blue-50'
-                  : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                  ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-200 dark:border-blue-700'
+                  : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
               <FunnelIcon className="h-4 w-4 mr-2" />
@@ -161,7 +161,7 @@ const AuditLogs: React.FC = () => {
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ArrowPathIcon
                 className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
@@ -173,11 +173,11 @@ const AuditLogs: React.FC = () => {
 
         {/* 高级筛选面板 */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* 操作类型 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   操作类型
                 </label>
                 <select
@@ -188,7 +188,7 @@ const AuditLogs: React.FC = () => {
                       action: e.target.value as AuditLog['action'] | '',
                     })
                   }
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 >
                   <option value="">全部</option>
                   {actionOptions.map((option) => (
@@ -201,7 +201,7 @@ const AuditLogs: React.FC = () => {
 
               {/* 模块 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   模块
                 </label>
                 <select
@@ -212,7 +212,7 @@ const AuditLogs: React.FC = () => {
                       module: e.target.value as AuditLog['module'] | '',
                     })
                   }
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 >
                   <option value="">全部</option>
                   {moduleOptions.map((option) => (
@@ -225,7 +225,7 @@ const AuditLogs: React.FC = () => {
 
               {/* 开始时间 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   开始时间
                 </label>
                 <input
@@ -234,13 +234,13 @@ const AuditLogs: React.FC = () => {
                   onChange={(e) =>
                     setFilters({ ...filters, start_date: e.target.value })
                   }
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
 
               {/* 结束时间 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   结束时间
                 </label>
                 <input
@@ -249,7 +249,7 @@ const AuditLogs: React.FC = () => {
                   onChange={(e) =>
                     setFilters({ ...filters, end_date: e.target.value })
                   }
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
             </div>
@@ -258,7 +258,7 @@ const AuditLogs: React.FC = () => {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={handleResetFilters}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 重置筛选
               </button>

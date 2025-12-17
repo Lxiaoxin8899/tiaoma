@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { XMarkIcon, GlobeAltIcon, ShieldCheckIcon, BellIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 
 interface GeneralSettings {

@@ -1,7 +1,7 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import { MaterialBatch, BatchFormData, BatchQueryParams } from '@/types/database'
-import { toast } from 'react-hot-toast'
+import { notify } from '@/lib/notify'
 
 interface BatchState {
   batches: MaterialBatch[]
@@ -118,7 +118,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         error: '获取批次列表失败',
         loading: false 
       })
-      toast.error('获取批次列表失败')
+      notify.error('获取批次列表失败')
     }
   },
   
@@ -152,7 +152,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       
       if (error) throw error
       
-      toast.success('批次创建成功')
+      notify.success('批次创建成功')
       await get().fetchBatches()
       return true
     } catch (error) {
@@ -161,7 +161,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         error: '创建批次失败',
         loading: false 
       })
-      toast.error('创建批次失败')
+      notify.error('创建批次失败')
       return false
     }
   },
@@ -203,7 +203,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       
       if (error) throw error
       
-      toast.success('批次更新成功')
+      notify.success('批次更新成功')
       await get().fetchBatches()
       return true
     } catch (error) {
@@ -212,7 +212,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         error: '更新批次失败',
         loading: false 
       })
-      toast.error('更新批次失败')
+      notify.error('更新批次失败')
       return false
     }
   },
@@ -228,7 +228,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       
       if (error) throw error
       
-      toast.success('批次删除成功')
+      notify.success('批次删除成功')
       await get().fetchBatches()
       return true
     } catch (error) {
@@ -237,7 +237,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         error: '删除批次失败',
         loading: false 
       })
-      toast.error('删除批次失败')
+      notify.error('删除批次失败')
       return false
     }
   },

@@ -1,10 +1,10 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { db } from '../lib/localdb';
 import type { AuditLog, AuditLogQueryParams } from '../types/database';
 import { errorHandler, reportError } from '../lib/errorHandler';
 import { useAuthStore } from './authStore';
-import toast from 'react-hot-toast';
+import { notify } from '../lib/notify';
 
 interface AuditState {
   logs: AuditLog[];
@@ -200,7 +200,7 @@ export const useAuditStore = create<AuditStore>((set) => ({
         if (error) {
           reportError(error, 'audit.fetchLogs');
           set({ error: error.message, loading: false });
-          toast.error('获取审计日志失败');
+          notify.error('获取审计日志失败');
           return;
         }
 
@@ -218,7 +218,7 @@ export const useAuditStore = create<AuditStore>((set) => ({
       const appError = errorHandler.handle(err, '获取审计日志失败');
       reportError(err, 'audit.fetchLogs');
       set({ error: errorHandler.getUserMessage(appError), loading: false });
-      toast.error('获取审计日志失败');
+      notify.error('获取审计日志失败');
     }
   },
 

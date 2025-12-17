@@ -1,4 +1,4 @@
-export const getStatusBadgeColor = (status: string): string => {
+﻿export const getStatusBadgeColor = (status: string): string => {
   const colorMap: Record<string, string> = {
     // Material statuses
     active: 'bg-green-100 text-green-800',

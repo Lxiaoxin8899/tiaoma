@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 /**
  * localSupabase：离线模式下用 localStorage 模拟 supabase-js 的常用 API。
  *

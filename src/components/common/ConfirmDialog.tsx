@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Dialog } from '@headlessui/react';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
@@ -72,16 +72,16 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-md w-full bg-white rounded-lg shadow-xl">
+        <Dialog.Panel className="mx-auto max-w-md w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-transparent dark:border-gray-800">
           <div className="p-6">
             <div className="flex items-center mb-4">
               {finalIcon}
-              <Dialog.Title className={`ml-3 text-lg font-semibold text-gray-900 ${!finalIcon ? '' : ''}`}>
+              <Dialog.Title className={`ml-3 text-lg font-semibold text-gray-900 dark:text-gray-100 ${!finalIcon ? '' : ''}`}>
                 {title}
               </Dialog.Title>
             </div>
             
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               {message}
             </p>
             

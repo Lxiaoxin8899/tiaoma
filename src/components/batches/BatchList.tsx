@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { useBatchStore } from '@/stores/batchStore'
 import { useMaterialStore } from '@/stores/materialStore'
 import { MaterialBatch } from '@/types/database'
@@ -22,7 +22,6 @@ import Pagination from '@/components/common/Pagination'
 import { getStatusBadgeColor } from '@/utils/statusHelpers'
 import { exportToExcel, getDateSuffix } from '@/lib/exportUtils'
 import { useToast } from '@/components/common/Toast'
-import { toast } from 'react-hot-toast'
 
 const BatchList: React.FC = () => {
   const {
@@ -114,17 +113,18 @@ const BatchList: React.FC = () => {
       ? `${outboundBatch.remarks}\n[${format(new Date(), 'yyyy-MM-dd HH:mm')}] 出库 ${quantity} (原因: ${reason || '无'})`
       : `[${format(new Date(), 'yyyy-MM-dd HH:mm')}] 出库 ${quantity} (原因: ${reason || '无'})`
 
-    const success = await updateBatch(outboundBatch.id, {
+    const ok = await updateBatch(outboundBatch.id, {
       remaining_quantity: newRemaining,
       remarks: newRemarks,
       // 当前库存为 0 时，标记为“已处置”
       status: newRemaining === 0 ? 'disposed' : outboundBatch.status
     })
 
-    if (success) {
-      toast.success('出库成功')
+    if (ok) {
+      success('出库成功')
       fetchBatches()
     } else {
+      showError('出库失败', '请重试')
       throw new Error('出库失败')
     }
   }

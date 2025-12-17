@@ -1,7 +1,7 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import { Supplier, SupplierFormData, QueryParams } from '@/types/database'
-import { toast } from 'react-hot-toast'
+import { notify } from '@/lib/notify'
 
 interface SupplierState {
   suppliers: Supplier[]
@@ -82,7 +82,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
         error: '获取供应商列表失败',
         loading: false 
       })
-      toast.error('获取供应商列表失败')
+      notify.error('获取供应商列表失败')
     }
   },
   
@@ -101,7 +101,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
       
       if (error) throw error
       
-      toast.success('供应商创建成功')
+      notify.success('供应商创建成功')
       await get().fetchSuppliers()
       return true
     } catch (error) {
@@ -110,7 +110,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
         error: '创建供应商失败',
         loading: false 
       })
-      toast.error('创建供应商失败')
+      notify.error('创建供应商失败')
       return false
     }
   },
@@ -129,7 +129,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
       
       if (error) throw error
       
-      toast.success('供应商更新成功')
+      notify.success('供应商更新成功')
       await get().fetchSuppliers()
       return true
     } catch (error) {
@@ -138,7 +138,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
         error: '更新供应商失败',
         loading: false 
       })
-      toast.error('更新供应商失败')
+      notify.error('更新供应商失败')
       return false
     }
   },
@@ -154,7 +154,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
       
       if (error) throw error
       
-      toast.success('供应商删除成功')
+      notify.success('供应商删除成功')
       await get().fetchSuppliers()
       return true
     } catch (error) {
@@ -163,7 +163,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
         error: '删除供应商失败',
         loading: false 
       })
-      toast.error('删除供应商失败')
+      notify.error('删除供应商失败')
       return false
     }
   },

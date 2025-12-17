@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { 
   PieChart, 
   Pie, 
@@ -8,6 +8,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { Material, MaterialCategory } from '../../types/database';
+import { useTheme } from '../../hooks/useTheme';
 
 interface CategoryPieChartProps {
   materials: Material[];
@@ -17,6 +18,7 @@ interface CategoryPieChartProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ materials, categories }) => {
+  const { isDark } = useTheme();
   const data = useMemo(() => {
     const categoryCount = new Map<string, number>();
     
@@ -40,8 +42,8 @@ const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ materials, categori
   }, [materials, categories]);
 
   return (
-    <div className="h-80 w-full bg-white p-4 rounded-lg shadow">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">物料分类分布</h3>
+    <div className="h-80 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-lg shadow-sm">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">物料分类分布</h3>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -58,8 +60,16 @@ const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ materials, categori
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip />
-          <Legend />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: isDark ? '#111827' : '#FFFFFF',
+              borderColor: isDark ? '#374151' : '#E5E7EB',
+              color: isDark ? '#F9FAFB' : '#111827',
+            }}
+            itemStyle={{ color: isDark ? '#F9FAFB' : '#111827' }}
+            labelStyle={{ color: isDark ? '#F9FAFB' : '#111827' }}
+          />
+          <Legend wrapperStyle={{ color: isDark ? '#D1D5DB' : '#374151' }} />
         </PieChart>
       </ResponsiveContainer>
     </div>
