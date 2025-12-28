@@ -27,8 +27,10 @@ function App() {
   // 说明：isAuthenticated 是方法，不是布尔值
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
 
-  // 说明：Electron 打包后使用 file:// 协议，BrowserRouter 刷新/深链会找不到文件；用 HashRouter 更稳妥。
-  const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
+  // 说明：Electron 打包后使用自定义协议 app:// 或 file://，BrowserRouter 刷新/深链会找不到文件；用 HashRouter 更稳妥。
+  // 检测是否在 Electron 环境中（非 http/https 协议）
+  const isElectron = !window.location.protocol.startsWith('http');
+  const Router = isElectron ? HashRouter : BrowserRouter;
 
   return (
     <ErrorBoundary>

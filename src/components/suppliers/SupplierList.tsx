@@ -37,13 +37,15 @@ const SupplierList: React.FC = () => {
 
   // 过滤供应商
   const filteredSuppliers = suppliers.filter(supplier => {
-    const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.phone?.includes(searchTerm);
-    
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm ||
+                         supplier.name.toLowerCase().includes(searchLower) ||
+                         supplier.code.toLowerCase().includes(searchLower) ||
+                         supplier.contact_person?.toLowerCase().includes(searchLower) ||
+                         String(supplier.phone || '').includes(searchTerm);
+
     const matchesStatus = statusFilter === 'all' || supplier.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 

@@ -43,44 +43,38 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
   setPagination: (currentPage, pageSize) => set({ currentPage, pageSize }),
   
   fetchSuppliers: async (params) => {
-    const { currentPage, pageSize, searchQuery } = get()
-    const { page = currentPage, limit = pageSize } = params || {}
-    
+    const { searchQuery } = get()
+
     set({ loading: true, error: null })
-    
+
     try {
       let query = supabase
         .from('suppliers')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-      
+
       // Apply search filter
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,code.ilike.%${searchQuery}%`)
+      if (params?.search || searchQuery) {
+        const search = params?.search ?? searchQuery
+        query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,contact_person.ilike.%${search}%,phone.ilike.%${search}%`)
       }
-      
-      // Apply pagination
-      const from = (page - 1) * limit
-      const to = from + limit - 1
-      query = query.range(from, to)
-      
+
+      // 获取所有数据，前端分页
       const { data, error, count } = await query
-      
+
       if (error) throw error
 
       const suppliers = (data as Supplier[] | null) || []
       set({
         suppliers,
         totalCount: count || 0,
-        currentPage: page,
-        pageSize: limit,
         loading: false
       })
     } catch (error) {
       console.error('Error fetching suppliers:', error)
-      set({ 
+      set({
         error: '获取供应商列表失败',
-        loading: false 
+        loading: false
       })
       notify.error('获取供应商列表失败')
     }
