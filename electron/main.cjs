@@ -110,7 +110,9 @@ function setupProtocolHandler() {
       // 安全检查：确保路径在 dist 目录内
       const resolvedPath = path.resolve(filePath)
       const resolvedDist = path.resolve(DIST_DIR_PATH)
-      if (!resolvedPath.startsWith(resolvedDist)) {
+      // 说明：不能直接用 startsWith(resolvedDist)，否则像 "C:\\distmalicious" 也会误判为在 "C:\\dist" 下。
+      // 这里使用 “相等 或 以 dist\\ 为前缀” 的判断，避免路径穿越与前缀碰撞。
+      if (resolvedPath !== resolvedDist && !resolvedPath.startsWith(resolvedDist + path.sep)) {
         return new Response('Forbidden', { status: 403 })
       }
 

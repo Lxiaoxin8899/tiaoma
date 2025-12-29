@@ -315,9 +315,22 @@ class QueryBuilder<T = any> {
 }
 
 class LocalSupabaseAuth {
-  async signInWithPassword({ email }: { email: string; password: string }): Promise<AuthResult> {
+  // 说明：离线模式的认证能力有限（数据在本地可篡改），这里提供一个“最低限度”的口令校验：
+  // - 必须输入密码且匹配固定口令，避免“随便输邮箱就能进/自动进第一个用户”的高风险行为
+  // - 该口令仅用于演示/开发环境，生产环境请使用真实 Supabase 认证与 RLS
+  private static readonly OFFLINE_DEMO_PASSWORD = 'local'
+
+  async signInWithPassword({ email, password }: { email: string; password: string }): Promise<AuthResult> {
     const users = db.getAll('users') as any[]
-    const u = users.find((x: any) => x.email === email) || users[0]
+    const u = users.find((x: any) => x.email === email)
+    if (!u) {
+      return { data: null, error: { message: '用户不存在（离线模式仅允许使用本地预置/已创建账号）' } }
+    }
+
+    // 说明：离线模式不做“真实密码体系”，但至少要求输入固定口令，降低误用风险
+    if (!password || password !== LocalSupabaseAuth.OFFLINE_DEMO_PASSWORD) {
+      return { data: null, error: { message: '密码错误（离线模式默认口令为 local）' } }
+    }
 
     const sessionPayload = {
       user: u,
@@ -329,7 +342,12 @@ class LocalSupabaseAuth {
     return { data: { user: u, session: sessionPayload }, error: null }
   }
 
-  async signUp({ email, options }: SignUpData): Promise<AuthResult> {
+  async signUp({ email, password, options }: SignUpData): Promise<AuthResult> {
+    // 说明：离线模式注册同样要求固定口令，避免误把“离线注册”当成真实账号体系
+    if (!password || password !== LocalSupabaseAuth.OFFLINE_DEMO_PASSWORD) {
+      return { data: null, error: { message: '注册失败：离线模式默认口令为 local' } }
+    }
+
     const user = db.insert('users', {
       email,
       username: email.split('@')[0],
@@ -354,19 +372,9 @@ class LocalSupabaseAuth {
   }
 
   async getUser(): Promise<{ data: { user: User | null }; error: QueryError | null }> {
-    let s = session.get()
-    if (!s) {
-      const users = db.getAll('users') as any[]
-      const u = users[0]
-      const payload = {
-        user: u,
-        token: 'local',
-        expires_at: Date.now() + 24 * 3600 * 1000,
-      }
-      session.set(payload)
-      s = payload
-    }
-    return { data: { user: s.user }, error: null }
+    const s = session.get()
+    // 说明：不再“自动登录第一个用户”，避免离线模式下绕过登录页直接进入系统
+    return { data: { user: s?.user ?? null }, error: null }
   }
 
   async getSession(): Promise<{ data: { session: any } | null; error: QueryError | null }> {

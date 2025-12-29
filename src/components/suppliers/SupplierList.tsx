@@ -143,7 +143,8 @@ const SupplierList: React.FC = () => {
       const filename = `供应商列表_${getDateSuffix()}`;
 
       // 导出数据
-      exportToExcel(suppliers, filename, '供应商列表', columnMap);
+      // 导出数据（异步生成并下载）
+      await exportToExcel(suppliers, filename, '供应商列表', columnMap);
 
       success('数据已导出成功');
     } catch (err: unknown) {
@@ -528,7 +529,8 @@ const SupplierList: React.FC = () => {
           onImport={handleImport}
           onDownloadTemplate={downloadSupplierTemplate}
           validateData={validateSupplierData}
-          templateFields={['code', 'name', 'contact_person', 'phone', 'email', 'address', 'status']}
+          // 说明：与导入模板表头一致（Excel 第 1 行字段名）
+          templateFields={['供应商编码', '供应商名称', '联系人', '联系电话', '邮箱', '地址', '状态']}
         />
       )}
     </div>

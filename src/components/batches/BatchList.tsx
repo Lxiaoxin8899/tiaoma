@@ -180,7 +180,8 @@ const BatchList: React.FC = () => {
       const filename = `入库记录_${getDateSuffix()}`
 
       // 导出数据
-      exportToExcel(batches, filename, '入库记录', columnMap)
+      // 导出数据（异步生成并下载）
+      await exportToExcel(batches, filename, '入库记录', columnMap)
 
       success('导出成功', `数据已导出到 ${filename}.xlsx`)
     } catch (err: unknown) {

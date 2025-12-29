@@ -1,4 +1,5 @@
-﻿import * as XLSX from 'xlsx';
+import { Workbook } from 'exceljs';
+import { saveAs } from 'file-saver';
 import { Material, Supplier } from '../types/database';
 
 // 导入验证错误类型
@@ -40,36 +41,114 @@ export interface SupplierImportRow {
   '状态': string;
 }
 
+// 导入文件限制（防止超大文件/超大表格导致卡死）
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_COLUMNS = 50;
+const MAX_ROWS = 5000; // 不含表头
+
 /**
- * 解析 Excel 文件
+ * 将 Excel 单元格值规整为“可展示/可校验”的基础类型
+ * 说明：这里不执行公式，只取文本/结果，避免出现奇怪对象导致校验异常。
+ */
+function normalizeCellValue(value: unknown): unknown {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (value instanceof Date) return value.toISOString();
+
+  // exceljs 的公式/富文本等会落到对象，这里尽量提取可读信息
+  if (typeof value === 'object') {
+    const v = value as Record<string, unknown>;
+    if ('text' in v && typeof v.text === 'string') return v.text;
+    if ('result' in v) return normalizeCellValue(v.result);
+    if ('formula' in v && typeof v.formula === 'string') return v.formula;
+  }
+
+  return String(value);
+}
+
+/**
+ * 解析 Excel 文件（仅支持 .xlsx）
  */
 export const parseExcelFile = async (file: File): Promise<unknown[]> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+  if (!file) throw new Error('未选择文件');
 
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+  // 说明：exceljs 仅支持 xlsx，这里明确拦截 .xls 以免用户误以为“导入成功但数据异常”
+  if (!file.name.toLowerCase().endsWith('.xlsx')) {
+    throw new Error('文件格式不支持：仅支持 .xlsx（不支持 .xls）');
+  }
 
-        // 读取第一个工作表
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    throw new Error(`文件过大：请上传不超过 ${Math.floor(MAX_FILE_SIZE_BYTES / 1024 / 1024)}MB 的 Excel 文件`);
+  }
 
-        // 转换为 JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        resolve(jsonData);
-      } catch (error) {
-        reject(new Error('解析 Excel 文件失败：' + (error instanceof Error ? error.message : '未知错误')));
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = new Workbook();
+    await workbook.xlsx.load(buffer);
+
+    if (workbook.worksheets.length === 0) {
+      throw new Error('Excel 文件中未找到工作表');
+    }
+
+    // 说明：按现有业务逻辑仅读取第一个工作表
+    const worksheet = workbook.worksheets[0];
+
+    const headerRow = worksheet.getRow(1);
+    const headers: string[] = [];
+
+    // 说明：exceljs 的 row.values 是从索引 1 开始，这里按 cellCount 遍历更直观
+    const headerCellCount = Math.min(headerRow.cellCount, MAX_COLUMNS);
+    for (let i = 1; i <= headerCellCount; i++) {
+      const raw = headerRow.getCell(i).value;
+      const text = String(normalizeCellValue(raw) ?? '').trim();
+      headers.push(text);
+    }
+
+    // 去掉尾部空标题
+    while (headers.length > 0 && !headers[headers.length - 1]) headers.pop();
+
+    if (headers.length === 0) {
+      throw new Error('未找到表头：请确保第 1 行是标题行');
+    }
+    if (headers.length > MAX_COLUMNS) {
+      throw new Error(`列数过多：最多支持 ${MAX_COLUMNS} 列`);
+    }
+
+    const rows: Record<string, unknown>[] = [];
+    const lastRow = Math.min(worksheet.rowCount, MAX_ROWS + 1); // +1 表头
+
+    for (let rowIndex = 2; rowIndex <= lastRow; rowIndex++) {
+      const row = worksheet.getRow(rowIndex);
+      const record: Record<string, unknown> = {};
+      let hasAnyValue = false;
+
+      for (let colIndex = 1; colIndex <= headers.length; colIndex++) {
+        const header = headers[colIndex - 1];
+        if (!header) continue;
+
+        const cellValue = normalizeCellValue(row.getCell(colIndex).value);
+        const normalized = typeof cellValue === 'string' ? cellValue.trim() : cellValue;
+
+        if (normalized !== '' && normalized !== null && normalized !== undefined) {
+          hasAnyValue = true;
+        }
+
+        record[header] = normalized;
       }
-    };
 
-    reader.onerror = () => {
-      reject(new Error('读取文件失败'));
-    };
+      // 说明：跳过全空行
+      if (!hasAnyValue) continue;
 
-    reader.readAsBinaryString(file);
-  });
+      rows.push(record);
+      if (rows.length >= MAX_ROWS) {
+        throw new Error(`数据行过多：最多支持 ${MAX_ROWS} 行（不含表头）`);
+      }
+    }
+
+    return rows;
+  } catch (error) {
+    throw new Error('解析 Excel 文件失败：' + (error instanceof Error ? error.message : '未知错误'));
+  }
 };
 
 /**
@@ -78,7 +157,7 @@ export const parseExcelFile = async (file: File): Promise<unknown[]> => {
 export const validateMaterialData = (
   rows: unknown[],
   categories: { id: string; name: string }[],
-  units: { id: string; name: string; symbol?: string }[]
+  units: { id: string; name: string; symbol?: string }[],
 ): ImportResult<Partial<Material>> => {
   const validData: Partial<Material>[] = [];
   const errors: ImportError[] = [];
@@ -95,7 +174,7 @@ export const validateMaterialData = (
         row: rowNum,
         field: '物料编码',
         value: data['物料编码'],
-        message: '物料编码不能为空'
+        message: '物料编码不能为空',
       });
     }
 
@@ -104,7 +183,7 @@ export const validateMaterialData = (
         row: rowNum,
         field: '物料名称',
         value: data['物料名称'],
-        message: '物料名称不能为空'
+        message: '物料名称不能为空',
       });
     }
 
@@ -113,7 +192,7 @@ export const validateMaterialData = (
         row: rowNum,
         field: '单位',
         value: data['单位'],
-        message: '单位不能为空'
+        message: '单位不能为空',
       });
     }
 
@@ -122,29 +201,29 @@ export const validateMaterialData = (
         row: rowNum,
         field: '分类',
         value: data['分类'],
-        message: '分类不能为空'
+        message: '分类不能为空',
       });
     }
 
     // 验证分类是否存在
-    const category = categories.find(c => c.name === data['分类']);
+    const category = categories.find((c) => c.name === data['分类']);
     if (data['分类'] && !category) {
       rowErrors.push({
         row: rowNum,
         field: '分类',
         value: data['分类'],
-        message: '分类不存在'
+        message: '分类不存在',
       });
     }
 
     // 验证单位是否存在
-    const unit = units.find(u => u.name === data['单位'] || u.symbol === data['单位']);
+    const unit = units.find((u) => u.name === data['单位'] || u.symbol === data['单位']);
     if (data['单位'] && !unit) {
       rowErrors.push({
         row: rowNum,
         field: '单位',
         value: data['单位'],
-        message: '单位不存在'
+        message: '单位不存在',
       });
     }
 
@@ -158,7 +237,7 @@ export const validateMaterialData = (
         row: rowNum,
         field: '当前库存',
         value: data['当前库存'],
-        message: '当前库存必须是数字'
+        message: '当前库存必须是数字',
       });
     }
 
@@ -167,7 +246,7 @@ export const validateMaterialData = (
         row: rowNum,
         field: '最小库存',
         value: data['最小库存'],
-        message: '最小库存必须是数字'
+        message: '最小库存必须是数字',
       });
     }
 
@@ -176,7 +255,7 @@ export const validateMaterialData = (
         row: rowNum,
         field: '最大库存',
         value: data['最大库存'],
-        message: '最大库存必须是数字'
+        message: '最大库存必须是数字',
       });
     }
 
@@ -185,20 +264,20 @@ export const validateMaterialData = (
         row: rowNum,
         field: '库存',
         value: `${minStock}/${maxStock}`,
-        message: '最小库存不能大于最大库存'
+        message: '最小库存不能大于最大库存',
       });
     }
 
     // 验证状态
     const statusMap: { [key: string]: 'active' | 'inactive' | 'discontinued' } = {
-      '可用': 'active',
-      '启用': 'active',
-      '正常': 'active',
-      'active': 'active',
-      '停用': 'inactive',
-      'inactive': 'inactive',
-      '报废': 'discontinued',
-      'discontinued': 'discontinued'
+      可用: 'active',
+      启用: 'active',
+      正常: 'active',
+      active: 'active',
+      停用: 'inactive',
+      inactive: 'inactive',
+      报废: 'discontinued',
+      discontinued: 'discontinued',
     };
 
     const status = statusMap[data['状态'] || '可用'] || 'active';
@@ -207,7 +286,7 @@ export const validateMaterialData = (
         row: rowNum,
         field: '状态',
         value: data['状态'],
-        message: '状态值无效，应为：可用、停用或报废'
+        message: '状态值无效，应为：可用、停用或报废',
       });
     }
 
@@ -228,7 +307,7 @@ export const validateMaterialData = (
         max_stock: maxStock,
         status: status,
         created_by: '', // 将在保存时设置
-        updated_by: ''  // 将在保存时设置
+        updated_by: '', // 将在保存时设置
       });
     }
   });
@@ -236,7 +315,7 @@ export const validateMaterialData = (
   return {
     validData,
     errors,
-    totalRows: rows.length
+    totalRows: rows.length,
   };
 };
 
@@ -259,7 +338,7 @@ export const validateSupplierData = (rows: unknown[]): ImportResult<Partial<Supp
         row: rowNum,
         field: '供应商编码',
         value: data['供应商编码'],
-        message: '供应商编码不能为空'
+        message: '供应商编码不能为空',
       });
     }
 
@@ -268,7 +347,7 @@ export const validateSupplierData = (rows: unknown[]): ImportResult<Partial<Supp
         row: rowNum,
         field: '供应商名称',
         value: data['供应商名称'],
-        message: '供应商名称不能为空'
+        message: '供应商名称不能为空',
       });
     }
 
@@ -280,7 +359,7 @@ export const validateSupplierData = (rows: unknown[]): ImportResult<Partial<Supp
           row: rowNum,
           field: '邮箱',
           value: data['邮箱'],
-          message: '邮箱格式不正确'
+          message: '邮箱格式不正确',
         });
       }
     }
@@ -293,19 +372,19 @@ export const validateSupplierData = (rows: unknown[]): ImportResult<Partial<Supp
           row: rowNum,
           field: '联系电话',
           value: data['联系电话'],
-          message: '联系电话格式不正确'
+          message: '联系电话格式不正确',
         });
       }
     }
 
     // 验证状态
     const statusMap: { [key: string]: 'active' | 'inactive' } = {
-      '正常': 'active',
-      '启用': 'active',
-      '可用': 'active',
-      'active': 'active',
-      '停用': 'inactive',
-      'inactive': 'inactive'
+      正常: 'active',
+      启用: 'active',
+      可用: 'active',
+      active: 'active',
+      停用: 'inactive',
+      inactive: 'inactive',
     };
 
     const status = statusMap[data['状态'] || '正常'] || 'active';
@@ -314,7 +393,7 @@ export const validateSupplierData = (rows: unknown[]): ImportResult<Partial<Supp
         row: rowNum,
         field: '状态',
         value: data['状态'],
-        message: '状态值无效，应为：正常或停用'
+        message: '状态值无效，应为：正常或停用',
       });
     }
 
@@ -330,7 +409,7 @@ export const validateSupplierData = (rows: unknown[]): ImportResult<Partial<Supp
         phone: data['联系电话'] || '',
         email: data['邮箱'] || '',
         address: data['地址'] || '',
-        status: status
+        status: status,
       });
     }
   });
@@ -338,23 +417,44 @@ export const validateSupplierData = (rows: unknown[]): ImportResult<Partial<Supp
   return {
     validData,
     errors,
-    totalRows: rows.length
+    totalRows: rows.length,
   };
 };
 
 /**
  * 导出错误报告为 Excel 文件
  */
-export const exportErrorReport = (errors: ImportError[], fileName: string = '导入错误报告.xlsx') => {
-  const errorData = errors.map(error => ({
-    '行号': error.row,
-    '字段': error.field,
-    '值': error.value,
-    '错误信息': error.message
+export const exportErrorReport = async (
+  errors: ImportError[],
+  fileName: string = '导入错误报告.xlsx',
+): Promise<void> => {
+  const errorData = errors.map((error) => ({
+    行号: error.row,
+    字段: error.field,
+    值: error.value ?? '',
+    错误信息: error.message,
   }));
 
-  const ws = XLSX.utils.json_to_sheet(errorData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '错误报告');
-  XLSX.writeFile(wb, fileName);
+  const wb = new Workbook();
+  const ws = wb.addWorksheet('错误报告');
+
+  const headers = ['行号', '字段', '值', '错误信息'];
+  ws.addRow(headers);
+  for (const row of errorData) {
+    ws.addRow(headers.map((h) => (row as any)[h]));
+  }
+  ws.columns = [
+    { header: '行号', key: '行号', width: 8 },
+    { header: '字段', key: '字段', width: 16 },
+    { header: '值', key: '值', width: 30 },
+    { header: '错误信息', key: '错误信息', width: 40 },
+  ];
+
+  const buffer = await wb.xlsx.writeBuffer();
+  saveAs(
+    new Blob([buffer as ArrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }),
+    fileName,
+  );
 };

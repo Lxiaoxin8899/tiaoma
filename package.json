@@ -13,10 +13,10 @@
     "preview": "vite preview",
     "check": "tsc -b --noEmit",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:preview": "npm run build && electron .",
-    "electron:build": "npm run build && electron-builder",
-    "electron:build:win": "npm run build && electron-builder --win",
-    "electron:portable": "npm run build && electron-builder --win portable"
+    "electron:preview": "pnpm -s build && electron .",
+    "electron:build": "pnpm -s build && electron-builder",
+    "electron:build:win": "pnpm -s build && electron-builder --win",
+    "electron:portable": "pnpm -s build && electron-builder --win portable"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
@@ -34,7 +34,7 @@
     "react-router-dom": "^7.3.0",
     "recharts": "^3.5.1",
     "tailwind-merge": "^3.0.2",
-    "xlsx": "^0.18.5",
+    "exceljs": "^4.4.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

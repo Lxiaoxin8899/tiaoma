@@ -7,7 +7,7 @@ export interface ImportModalProps {
   title: string;
   onClose: () => void;
   onImport: (data: unknown[]) => Promise<{ success: number; failed: number }>;
-  onDownloadTemplate: () => void;
+  onDownloadTemplate: () => void | Promise<void>;
   validateData: (rows: unknown[]) => ImportResult<unknown>;
   templateFields: string[];
 }
@@ -66,10 +66,11 @@ const ImportModal: React.FC<ImportModalProps> = ({
     setIsDragging(false);
 
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && (droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
+    // 说明：当前导入解析仅支持 .xlsx（exceljs 不支持 .xls）
+    if (droppedFile && droppedFile.name.toLowerCase().endsWith('.xlsx')) {
       handleFileChange(droppedFile);
     } else {
-      notify.warning('文件格式不支持', '请上传 Excel 文件（.xlsx 或 .xls）');
+      notify.warning('文件格式不支持', '请上传 Excel 文件（.xlsx）');
     }
   };
 
@@ -171,10 +172,15 @@ const ImportModal: React.FC<ImportModalProps> = ({
             {currentStep === 'upload' && (
               <div>
                 <div className="mb-4">
-                  <button
-                    onClick={onDownloadTemplate}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
-                  >
+                    <button
+                      onClick={() => {
+                        void Promise.resolve(onDownloadTemplate()).catch((err: unknown) => {
+                          const message = err instanceof Error ? err.message : '下载模板失败';
+                          notify.error('下载模板失败', message);
+                        });
+                      }}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
+                    >
                     <DocumentArrowDownIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
                     下载导入模板
                   </button>
@@ -203,11 +209,12 @@ const ImportModal: React.FC<ImportModalProps> = ({
                         name="file-upload"
                         type="file"
                         className="sr-only"
-                        accept=".xlsx,.xls"
+                        // 说明：仅支持 .xlsx（exceljs 不支持 .xls）
+                        accept=".xlsx"
                         onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                       />
                     </label>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">支持 .xlsx 和 .xls 格式</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">支持 .xlsx 格式</p>
                   </div>
                 </div>
 

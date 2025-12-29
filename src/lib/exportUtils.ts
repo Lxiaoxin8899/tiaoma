@@ -1,5 +1,5 @@
-﻿import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { Workbook } from 'exceljs';
 
 /**
  * 防止 Excel/CSV 公式注入：
@@ -15,116 +15,6 @@ function sanitizeSpreadsheetCell(value: unknown): unknown {
 }
 
 /**
- * 导出数据到 Excel 文件
- * @param data 要导出的数据数组
- * @param filename 文件名（不含扩展名）
- * @param sheetName 工作表名称
- * @param columnMap 列标题映射对象，键为字段路径，值为显示标题
- */
-export function exportToExcel<T extends object>(
-  data: T[],
-  filename: string,
-  sheetName: string = 'Sheet1',
-  columnMap?: Record<string, string>
-): void {
-  try {
-    if (!data || data.length === 0) {
-      throw new Error('没有数据可以导出');
-    }
-
-    // 转换数据
-    const exportData = data.map((item) => {
-      const row: Record<string, unknown> = {};
-
-      if (columnMap) {
-        // 使用自定义列映射
-        Object.entries(columnMap).forEach(([path, label]) => {
-          row[label] = sanitizeSpreadsheetCell(getNestedValue(item, path));
-        });
-      } else {
-        // 使用原始数据
-        Object.assign(row, item);
-        Object.keys(row).forEach((key) => {
-          row[key] = sanitizeSpreadsheetCell(row[key]);
-        });
-      }
-
-      return row;
-    });
-
-    // 创建工作簿
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-
-    // 生成 Excel 文件
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    // 保存文件
-    saveAs(blob, `${filename}.xlsx`);
-  } catch (error) {
-    console.error('导出 Excel 失败:', error);
-    throw error;
-  }
-}
-
-/**
- * 导出数据到 CSV 文件
- * @param data 要导出的数据数组
- * @param filename 文件名（不含扩展名）
- * @param columnMap 列标题映射对象，键为字段路径，值为显示标题
- */
-export function exportToCSV<T extends object>(
-  data: T[],
-  filename: string,
-  columnMap?: Record<string, string>
-): void {
-  try {
-    if (!data || data.length === 0) {
-      throw new Error('没有数据可以导出');
-    }
-
-    // 转换数据
-    const exportData = data.map((item) => {
-      const row: Record<string, unknown> = {};
-
-      if (columnMap) {
-        // 使用自定义列映射
-        Object.entries(columnMap).forEach(([path, label]) => {
-          row[label] = sanitizeSpreadsheetCell(getNestedValue(item, path));
-        });
-      } else {
-        // 使用原始数据
-        Object.assign(row, item);
-        Object.keys(row).forEach((key) => {
-          row[key] = sanitizeSpreadsheetCell(row[key]);
-        });
-      }
-
-      return row;
-    });
-
-    // 创建工作表
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-
-    // 生成 CSV 内容
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
-
-    // 添加 BOM 以支持中文
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-
-    // 保存文件
-    saveAs(blob, `${filename}.csv`);
-  } catch (error) {
-    console.error('导出 CSV 失败:', error);
-    throw error;
-  }
-}
-
-/**
  * 获取嵌套对象的值
  * @param obj 对象
  * @param path 属性路径，如 'user.name'
@@ -137,15 +27,8 @@ function getNestedValue(obj: unknown, path: string): unknown {
   let value: unknown = obj;
 
   for (const key of keys) {
-    if (value === null || value === undefined) {
-      return '';
-    }
-
-    // 只允许从对象/数组上取值，避免运行时异常
-    if (typeof value !== 'object') {
-      return '';
-    }
-
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'object') return '';
     value = (value as Record<string, unknown>)[key];
   }
 
@@ -188,40 +71,179 @@ function isDateString(str: string): boolean {
 /**
  * 格式化日期
  * @param date 日期对象
- * @returns 格式化后的日期字符串 YYYY-MM-DD HH:mm:ss
+ * @returns 格式化后的日期字符串
  */
 function formatDate(date: Date): string {
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
-    return '';
-  }
-
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
-
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**
- * 获取当前日期的文件名后缀
- * @returns YYYYMMDD 格式的日期字符串
+ * 将二维表数据写入 Excel 工作表。
+ * 说明：这里不做复杂样式，只做“可用、稳定、可下载”的导出能力。
+ */
+function writeWorksheet(
+  worksheet: ReturnType<Workbook['addWorksheet']>,
+  rows: Array<Record<string, unknown>>,
+  headers: string[],
+): void {
+  worksheet.addRow(headers);
+  for (const row of rows) {
+    worksheet.addRow(headers.map((h) => row[h]));
+  }
+
+  // 说明：粗略计算列宽，避免内容被截断得太严重（上限 60，防止超宽影响阅读）
+  worksheet.columns = headers.map((h) => {
+    const headerWidth = Math.min(60, Math.max(10, String(h).length + 2));
+    const contentMax = rows.reduce((max, r) => {
+      const v = r[h];
+      if (v === null || v === undefined) return max;
+      return Math.min(60, Math.max(max, String(v).length + 2));
+    }, headerWidth);
+    return { header: h, key: h, width: contentMax };
+  });
+}
+
+/**
+ * 导出数据到 Excel 文件
+ * @param data 要导出的数据数组
+ * @param filename 文件名（不含扩展名）
+ * @param sheetName 工作表名称
+ * @param columnMap 列标题映射对象，键为字段路径，值为显示标题
+ */
+export async function exportToExcel<T extends object>(
+  data: T[],
+  filename: string,
+  sheetName: string = 'Sheet1',
+  columnMap?: Record<string, string>,
+): Promise<void> {
+  if (!data || data.length === 0) {
+    throw new Error('没有数据可以导出');
+  }
+
+  // 说明：先确定列顺序（使用 columnMap 的顺序优先），避免导出字段顺序随机抖动
+  const headers = columnMap ? Object.values(columnMap) : Object.keys(data[0] as Record<string, unknown>);
+
+  // 转换数据
+  const exportData = data.map((item) => {
+    const row: Record<string, unknown> = {};
+
+    if (columnMap) {
+      // 使用自定义列映射
+      Object.entries(columnMap).forEach(([path, label]) => {
+        row[label] = sanitizeSpreadsheetCell(getNestedValue(item, path));
+      });
+    } else {
+      // 使用原始数据
+      Object.assign(row, item);
+      Object.keys(row).forEach((key) => {
+        row[key] = sanitizeSpreadsheetCell(row[key]);
+      });
+    }
+
+    return row;
+  });
+
+  const workbook = new Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
+  writeWorksheet(worksheet, exportData, headers);
+
+  try {
+    // 生成 Excel 文件（浏览器环境使用 writeBuffer）
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([excelBuffer as ArrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    saveAs(blob, `${filename}.xlsx`);
+  } catch (error) {
+    console.error('导出 Excel 失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 导出数据到 CSV 文件
+ * @param data 要导出的数据数组
+ * @param filename 文件名（不含扩展名）
+ * @param columnMap 列标题映射对象，键为字段路径，值为显示标题
+ */
+export function exportToCSV<T extends object>(
+  data: T[],
+  filename: string,
+  columnMap?: Record<string, string>,
+): void {
+  if (!data || data.length === 0) {
+    throw new Error('没有数据可以导出');
+  }
+
+  const headers = columnMap ? Object.values(columnMap) : Object.keys(data[0] as Record<string, unknown>);
+
+  // 转换数据
+  const exportData = data.map((item) => {
+    const row: Record<string, unknown> = {};
+
+    if (columnMap) {
+      // 使用自定义列映射
+      Object.entries(columnMap).forEach(([path, label]) => {
+        row[label] = sanitizeSpreadsheetCell(getNestedValue(item, path));
+      });
+    } else {
+      // 使用原始数据
+      Object.assign(row, item);
+      Object.keys(row).forEach((key) => {
+        row[key] = sanitizeSpreadsheetCell(row[key]);
+      });
+    }
+
+    return row;
+  });
+
+  // 生成 CSV 内容（不再依赖 xlsx，避免引入高危依赖）
+  const escapeCsvCell = (v: unknown) => {
+    const s = String(v ?? '');
+    const escaped = s.replace(/\"/g, '""');
+    return /[",\n\r]/.test(escaped) ? `"${escaped}"` : escaped;
+  };
+
+  const lines: string[] = [];
+  lines.push(headers.map(escapeCsvCell).join(','));
+  for (const row of exportData) {
+    lines.push(headers.map((h) => escapeCsvCell(row[h])).join(','));
+  }
+
+  const csv = lines.join('\n');
+
+  try {
+    // 添加 BOM 以支持中文
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, `${filename}.csv`);
+  } catch (error) {
+    console.error('导出 CSV 失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取日期后缀，用于文件名
+ * @returns 日期字符串，格式：YYYYMMDD
  */
 export function getDateSuffix(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}${month}${day}`;
 }
 
 /**
  * 下载物料导入模板
  */
-export const downloadMaterialTemplate = () => {
+export const downloadMaterialTemplate = async (): Promise<void> => {
   // 模板数据，包含示例和说明
   const templateData = [
     {
@@ -233,7 +255,7 @@ export const downloadMaterialTemplate = () => {
       '当前库存': 1000,
       '最小库存': 100,
       '最大库存': 5000,
-      '状态': '可用'
+      '状态': '可用',
     },
     {
       '物料编码': 'MAT002',
@@ -244,7 +266,7 @@ export const downloadMaterialTemplate = () => {
       '当前库存': 50,
       '最小库存': 10,
       '最大库存': 200,
-      '状态': '可用'
+      '状态': '可用',
     },
     {
       '物料编码': '',
@@ -255,31 +277,26 @@ export const downloadMaterialTemplate = () => {
       '当前库存': '',
       '最小库存': '',
       '最大库存': '',
-      '状态': ''
-    }
+      '状态': '',
+    },
   ];
 
-  // 创建工作表
-  const ws = XLSX.utils.json_to_sheet(templateData);
+  const wb = new Workbook();
 
-  // 设置列宽
-  ws['!cols'] = [
-    { wch: 15 }, // 物料编码
-    { wch: 20 }, // 物料名称
-    { wch: 25 }, // 规格型号
-    { wch: 10 }, // 单位
-    { wch: 15 }, // 分类
-    { wch: 12 }, // 当前库存
-    { wch: 12 }, // 最小库存
-    { wch: 12 }, // 最大库存
-    { wch: 10 }  // 状态
-  ];
+  // ---- Sheet1：模板
+  const ws = wb.addWorksheet('物料导入');
+  const templateHeaders = Object.keys(templateData[0]);
+  writeWorksheet(
+    ws,
+    templateData.map((r) => {
+      const row: Record<string, unknown> = {};
+      for (const h of templateHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      return row;
+    }),
+    templateHeaders,
+  );
 
-  // 创建工作簿
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '物料导入');
-
-  // 添加说明工作表
+  // ---- Sheet2：说明
   const instructionsData = [
     { '字段名': '物料编码', '是否必填': '是', '说明': '物料的唯一编码，不能重复' },
     { '字段名': '物料名称', '是否必填': '是', '说明': '物料的名称' },
@@ -289,25 +306,34 @@ export const downloadMaterialTemplate = () => {
     { '字段名': '当前库存', '是否必填': '否', '说明': '当前库存数量，默认为0' },
     { '字段名': '最小库存', '是否必填': '否', '说明': '最小库存数量，默认为0' },
     { '字段名': '最大库存', '是否必填': '否', '说明': '最大库存数量，默认为0' },
-    { '字段名': '状态', '是否必填': '否', '说明': '物料状态：可用、停用、报废，默认为可用' }
+    { '字段名': '状态', '是否必填': '否', '说明': '物料状态：可用、停用、报废，默认为可用' },
   ];
 
-  const instructionsWs = XLSX.utils.json_to_sheet(instructionsData);
-  instructionsWs['!cols'] = [
-    { wch: 15 },
-    { wch: 12 },
-    { wch: 40 }
-  ];
-  XLSX.utils.book_append_sheet(wb, instructionsWs, '导入说明');
+  const instructionsWs = wb.addWorksheet('导入说明');
+  const instructionsHeaders = Object.keys(instructionsData[0]);
+  writeWorksheet(
+    instructionsWs,
+    instructionsData.map((r) => {
+      const row: Record<string, unknown> = {};
+      for (const h of instructionsHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      return row;
+    }),
+    instructionsHeaders,
+  );
 
-  // 下载文件
-  XLSX.writeFile(wb, '物料导入模板.xlsx');
+  const buffer = await wb.xlsx.writeBuffer();
+  saveAs(
+    new Blob([buffer as ArrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }),
+    '物料导入模板.xlsx',
+  );
 };
 
 /**
  * 下载供应商导入模板
  */
-export const downloadSupplierTemplate = () => {
+export const downloadSupplierTemplate = async (): Promise<void> => {
   // 模板数据，包含示例和说明
   const templateData = [
     {
@@ -317,7 +343,7 @@ export const downloadSupplierTemplate = () => {
       '联系电话': '13800138000',
       '邮箱': 'zhangsan@example.com',
       '地址': '北京市朝阳区科技园',
-      '状态': '正常'
+      '状态': '正常',
     },
     {
       '供应商编码': 'SUP002',
@@ -326,7 +352,7 @@ export const downloadSupplierTemplate = () => {
       '联系电话': '13900139000',
       '邮箱': 'lisi@example.com',
       '地址': '上海市浦东新区商业街',
-      '状态': '正常'
+      '状态': '正常',
     },
     {
       '供应商编码': '',
@@ -335,29 +361,26 @@ export const downloadSupplierTemplate = () => {
       '联系电话': '',
       '邮箱': '',
       '地址': '',
-      '状态': ''
-    }
+      '状态': '',
+    },
   ];
 
-  // 创建工作表
-  const ws = XLSX.utils.json_to_sheet(templateData);
+  const wb = new Workbook();
 
-  // 设置列宽
-  ws['!cols'] = [
-    { wch: 15 }, // 供应商编码
-    { wch: 25 }, // 供应商名称
-    { wch: 12 }, // 联系人
-    { wch: 15 }, // 联系电话
-    { wch: 25 }, // 邮箱
-    { wch: 30 }, // 地址
-    { wch: 10 }  // 状态
-  ];
+  // ---- Sheet1：模板
+  const ws = wb.addWorksheet('供应商导入');
+  const templateHeaders = Object.keys(templateData[0]);
+  writeWorksheet(
+    ws,
+    templateData.map((r) => {
+      const row: Record<string, unknown> = {};
+      for (const h of templateHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      return row;
+    }),
+    templateHeaders,
+  );
 
-  // 创建工作簿
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '供应商导入');
-
-  // 添加说明工作表
+  // ---- Sheet2：说明
   const instructionsData = [
     { '字段名': '供应商编码', '是否必填': '是', '说明': '供应商的唯一编码，不能重复' },
     { '字段名': '供应商名称', '是否必填': '是', '说明': '供应商的名称' },
@@ -365,17 +388,26 @@ export const downloadSupplierTemplate = () => {
     { '字段名': '联系电话', '是否必填': '否', '说明': '供应商的联系电话' },
     { '字段名': '邮箱', '是否必填': '否', '说明': '供应商的邮箱地址，需符合邮箱格式' },
     { '字段名': '地址', '是否必填': '否', '说明': '供应商的联系地址' },
-    { '字段名': '状态', '是否必填': '否', '说明': '供应商状态：正常、停用，默认为正常' }
+    { '字段名': '状态', '是否必填': '否', '说明': '供应商状态：正常、停用，默认为正常' },
   ];
 
-  const instructionsWs = XLSX.utils.json_to_sheet(instructionsData);
-  instructionsWs['!cols'] = [
-    { wch: 15 },
-    { wch: 12 },
-    { wch: 40 }
-  ];
-  XLSX.utils.book_append_sheet(wb, instructionsWs, '导入说明');
+  const instructionsWs = wb.addWorksheet('导入说明');
+  const instructionsHeaders = Object.keys(instructionsData[0]);
+  writeWorksheet(
+    instructionsWs,
+    instructionsData.map((r) => {
+      const row: Record<string, unknown> = {};
+      for (const h of instructionsHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      return row;
+    }),
+    instructionsHeaders,
+  );
 
-  // 下载文件
-  XLSX.writeFile(wb, '供应商导入模板.xlsx');
+  const buffer = await wb.xlsx.writeBuffer();
+  saveAs(
+    new Blob([buffer as ArrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }),
+    '供应商导入模板.xlsx',
+  );
 };

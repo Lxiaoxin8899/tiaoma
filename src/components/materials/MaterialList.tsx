@@ -152,8 +152,8 @@ const MaterialList: React.FC = () => {
       // 生成文件名
       const filename = `物料列表_${getDateSuffix()}`;
 
-      // 导出数据
-      exportToExcel(materials, filename, '物料列表', columnMap);
+      // 导出数据（异步生成并下载）
+      await exportToExcel(materials, filename, '物料列表', columnMap);
 
       success('导出成功', `数据已导出到 ${filename}.xlsx`);
     } catch (err: unknown) {
@@ -466,7 +466,8 @@ const MaterialList: React.FC = () => {
           onImport={handleImport}
           onDownloadTemplate={downloadMaterialTemplate}
           validateData={(rows) => validateMaterialData(rows, categories, units)}
-          templateFields={['code', 'name', 'specification', 'unit', 'category_id', 'current_stock', 'min_stock', 'max_stock', 'status']}
+          // 说明：与导入模板表头一致（Excel 第 1 行字段名）
+          templateFields={['物料编码', '物料名称', '规格型号', '单位', '分类', '当前库存', '最小库存', '最大库存', '状态']}
         />
       )}
     </div>
