@@ -1,6 +1,6 @@
 ﻿import React, { useState, useMemo } from 'react'
 import { Combobox } from '@headlessui/react'
-import { CheckIcon, ChevronUpDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, ChevronUpDownIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface Option {
     id: string
@@ -17,6 +17,7 @@ interface SearchableSelectProps {
     error?: string
     label: string
     required?: boolean
+    allowClear?: boolean
 }
 
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -27,7 +28,8 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     disabled = false,
     error,
     label,
-    required = false
+    required = false,
+    allowClear = false
 }) => {
     const [query, setQuery] = useState('')
 
@@ -48,7 +50,15 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 {label} {required && <span className="text-red-500">*</span>}
             </label>
-            <Combobox value={value} onChange={onChange} disabled={disabled}>
+            <Combobox
+                value={value}
+                // 选择后清空 query，避免下次打开下拉时仍然被上次搜索词过滤
+                onChange={(nextValue) => {
+                    onChange(nextValue)
+                    setQuery('')
+                }}
+                disabled={disabled}
+            >
                 <div className="relative">
                     <div className="relative">
                         <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
@@ -59,6 +69,21 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder={placeholder}
                         />
+                        {/* 可选字段时允许清空选择，解决“只能选不能搜/不好改选”的体验问题 */}
+                        {allowClear && !disabled && value && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onChange('')
+                                    setQuery('')
+                                }}
+                                className="absolute right-8 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                aria-label="清空选择"
+                                title="清空选择"
+                            >
+                                <XMarkIcon className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                        )}
                         <Combobox.Button className="absolute right-0 inset-y-0 flex items-center pr-2">
                             <ChevronUpDownIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                         </Combobox.Button>

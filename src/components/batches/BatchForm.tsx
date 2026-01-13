@@ -38,6 +38,23 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
     fetchSuppliers()
   }, [fetchMaterials, fetchSuppliers])
 
+  // 说明：一个物料编码只绑定一个供应商；新建批次时自动带出，避免每次手动改供应商
+  const selectedMaterial = React.useMemo(() => {
+    if (!formData.material_id) return null
+    return materials.find(m => m.id === formData.material_id) || null
+  }, [formData.material_id, materials])
+
+  useEffect(() => {
+    // 编辑批次时不自动覆盖（避免用户查看历史数据时被改动）
+    if (batch) return
+
+    // 物料变化时，如果物料已绑定默认供应商，则强制同步到批次 supplier_id
+    const boundSupplierId = selectedMaterial?.supplier_id ?? null
+    if (boundSupplierId && formData.supplier_id !== boundSupplierId) {
+      setFormData(prev => ({ ...prev, supplier_id: boundSupplierId }))
+    }
+  }, [batch, selectedMaterial, formData.supplier_id])
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
@@ -212,23 +229,38 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
             </div>
 
             {/* Supplier */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                供应商
-              </label>
-              <select
+            {/* 说明：优先使用“物料绑定的默认供应商”；若未绑定，才允许在批次上临时选择 */}
+            {selectedMaterial?.supplier_id ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">供应商</label>
+                <input
+                  type="text"
+                  disabled
+                  value={(() => {
+                    const supplier = suppliers.find(s => s.id === selectedMaterial.supplier_id)
+                    if (supplier) return `${supplier.code} - ${supplier.name}`
+                    return '已绑定默认供应商（加载中...）'
+                  })()}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  该物料已绑定默认供应商，批次将自动继承，用于条码/标签打印。
+                </p>
+              </div>
+            ) : (
+              <SearchableSelect
+                label="供应商"
                 value={formData.supplier_id || ''}
-                onChange={(e) => handleInputChange('supplier_id', e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">请选择供应商（可选）</option>
-                {suppliers.map(supplier => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.code} - {supplier.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                onChange={(value) => handleInputChange('supplier_id', value || null)}
+                options={suppliers.map(supplier => ({
+                  id: supplier.id,
+                  label: `${supplier.code} - ${supplier.name}`,
+                  subtitle: supplier.contact_person ? `联系人：${supplier.contact_person}` : undefined
+                }))}
+                placeholder="搜索供应商编码、名称..."
+                allowClear
+              />
+            )}
 
             {/* Location */}
             <div>

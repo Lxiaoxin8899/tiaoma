@@ -76,6 +76,7 @@ export const useBatchStore = create<BatchState>((set, get) => ({
             code,
             name,
             specification,
+            supplier_id,
             unit_obj:units(id, code, name, symbol)
           ),
           supplier:suppliers!supplier_id(
@@ -134,10 +135,49 @@ export const useBatchStore = create<BatchState>((set, get) => ({
       if (!batchNumber) {
         batchNumber = await get().generateBatchNumber(data.material_id)
       }
+
+      // 说明：批次的供应商优先继承“物料绑定的默认供应商”，避免每次新建批次都手动选供应商
+      let boundSupplierId: string | null | undefined = undefined
+      try {
+        const { data: materialRow, error: materialError } = await supabase
+          .from('materials')
+          .select('supplier_id')
+          .eq('id', data.material_id)
+          .single()
+        if (!materialError) {
+          boundSupplierId = (materialRow as { supplier_id?: string | null } | null)?.supplier_id ?? null
+        }
+      } catch {
+        // 忽略：离线/异常场景下，回退到表单传入的 supplier_id
+      }
+
+      // 兜底：如果物料尚未绑定默认供应商，则尝试沿用该物料最近一次批次的供应商（保证“打印页新建批次不丢供应商”）
+      if (!boundSupplierId) {
+        try {
+          const { data: batchRows, error: batchError } = await supabase
+            .from('material_batches')
+            .select('supplier_id, created_at')
+            .eq('material_id', data.material_id)
+            .order('created_at', { ascending: false })
+            .range(0, 20)
+
+          if (!batchError) {
+            const rows = (batchRows as Array<{ supplier_id?: string | null }> | null) || []
+            const latestSupplierId = rows.find(r => !!r.supplier_id)?.supplier_id ?? null
+            if (latestSupplierId) {
+              boundSupplierId = latestSupplierId
+            }
+          }
+        } catch {
+          // 忽略：兜底失败则仍使用表单传入值
+        }
+      }
       
       const batchData = {
         ...data,
         batch_number: batchNumber,
+        // 若物料已绑定默认供应商，则强制使用该 supplier_id
+        supplier_id: boundSupplierId ?? data.supplier_id ?? null,
         // 数据库/类型里批次状态使用 pending/available/...，这里默认使用 pending
         status: data.status || 'pending',
         // 初始库存=入库数量（后续出库只更新 remaining_quantity）

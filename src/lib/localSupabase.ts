@@ -315,22 +315,14 @@ class QueryBuilder<T = any> {
 }
 
 class LocalSupabaseAuth {
-  // 说明：离线模式的认证能力有限（数据在本地可篡改），这里提供一个“最低限度”的口令校验：
-  // - 必须输入密码且匹配固定口令，避免“随便输邮箱就能进/自动进第一个用户”的高风险行为
-  // - 该口令仅用于演示/开发环境，生产环境请使用真实 Supabase 认证与 RLS
-  private static readonly OFFLINE_DEMO_PASSWORD = 'local'
-
-  async signInWithPassword({ email, password }: { email: string; password: string }): Promise<AuthResult> {
+  // 说明：离线模式是“本地存储模拟”，认证与数据都可被本地篡改，因此这里不做强认证。
+  // 策略：
+  // - 优先按 email 匹配用户；如果找不到，则回退到第一个本地用户（方便纯离线场景免账号上手）
+  // - 不校验 password（离线模式的登录口令没有安全意义，避免用户无账号无法使用）
+  async signInWithPassword({ email }: { email: string; password: string }): Promise<AuthResult> {
     const users = db.getAll('users') as any[]
-    const u = users.find((x: any) => x.email === email)
-    if (!u) {
-      return { data: null, error: { message: '用户不存在（离线模式仅允许使用本地预置/已创建账号）' } }
-    }
-
-    // 说明：离线模式不做“真实密码体系”，但至少要求输入固定口令，降低误用风险
-    if (!password || password !== LocalSupabaseAuth.OFFLINE_DEMO_PASSWORD) {
-      return { data: null, error: { message: '密码错误（离线模式默认口令为 local）' } }
-    }
+    const u = users.find((x: any) => x.email === email) || users[0]
+    if (!u) return { data: null, error: { message: '离线用户数据缺失：请刷新页面或清空本地存储后重试' } }
 
     const sessionPayload = {
       user: u,
@@ -342,12 +334,7 @@ class LocalSupabaseAuth {
     return { data: { user: u, session: sessionPayload }, error: null }
   }
 
-  async signUp({ email, password, options }: SignUpData): Promise<AuthResult> {
-    // 说明：离线模式注册同样要求固定口令，避免误把“离线注册”当成真实账号体系
-    if (!password || password !== LocalSupabaseAuth.OFFLINE_DEMO_PASSWORD) {
-      return { data: null, error: { message: '注册失败：离线模式默认口令为 local' } }
-    }
-
+  async signUp({ email, options }: SignUpData): Promise<AuthResult> {
     const user = db.insert('users', {
       email,
       username: email.split('@')[0],
@@ -372,9 +359,22 @@ class LocalSupabaseAuth {
   }
 
   async getUser(): Promise<{ data: { user: User | null }; error: QueryError | null }> {
-    const s = session.get()
-    // 说明：不再“自动登录第一个用户”，避免离线模式下绕过登录页直接进入系统
-    return { data: { user: s?.user ?? null }, error: null }
+    let s = session.get()
+    if (!s) {
+      // 说明：纯离线使用时默认自动登录第一个本地用户，避免用户无账号无法进入系统。
+      // 如需强制走登录页，可在后续加一个环境开关来关闭该行为。
+      const users = db.getAll('users') as any[]
+      const u = users[0]
+      if (!u) return { data: { user: null }, error: null }
+      const payload = {
+        user: u,
+        token: 'local',
+        expires_at: Date.now() + 24 * 3600 * 1000,
+      }
+      session.set(payload)
+      s = payload
+    }
+    return { data: { user: s.user }, error: null }
   }
 
   async getSession(): Promise<{ data: { session: any } | null; error: QueryError | null }> {

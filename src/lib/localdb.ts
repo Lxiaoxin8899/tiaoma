@@ -192,13 +192,17 @@ export const enrich = {
   material: (m: any) => {
     const units = load(tableKeys.units)
     const cats = load(tableKeys.material_categories)
+    const suppliers = load(tableKeys.suppliers)
     const unit = units.find((u: any) => u.id === m.unit_id)
     const category = cats.find((c: any) => c.id === m.category_id)
+    const supplier = suppliers.find((s: any) => s.id === m.supplier_id)
     return {
       ...m,
       // 统一使用 unit_obj 作为联表结果字段，避免与 materials.unit（字符串）混淆
       unit_obj: unit ? { id: unit.id, code: unit.code, name: unit.name, symbol: unit.symbol } : undefined,
       category: category ? { id: category.id, name: category.name, code: category.code } : undefined,
+      // 说明：物料绑定默认供应商后，离线模式下也需要补齐 supplier，便于打印页直接展示
+      supplier: supplier ? { ...supplier } : undefined,
       // 兼容旧代码：有些地方仍会读取 material.unit（字符串）
       unit: m.unit ?? unit?.symbol ?? unit?.code ?? unit?.name
     }
@@ -208,7 +212,9 @@ export const enrich = {
     const materials = load(tableKeys.materials)
     const suppliers = load(tableKeys.suppliers)
     const material = materials.find((m: any) => m.id === b.material_id)
-    const supplier = suppliers.find((s: any) => s.id === b.supplier_id)
+    // 说明：若批次未保存 supplier_id，则尝试使用物料绑定的默认供应商
+    const resolvedSupplierId = b.supplier_id ?? material?.supplier_id
+    const supplier = suppliers.find((s: any) => s.id === resolvedSupplierId)
     return {
       ...b,
       material: material ? enrich.material(material) : undefined,

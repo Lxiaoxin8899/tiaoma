@@ -7,6 +7,7 @@ export interface Material {
   unit: string;
   unit_id?: string;
   category_id: string;
+  supplier_id?: string | null; // 物料默认供应商（一个物料编码对应一个供应商）
   status: 'active' | 'inactive' | 'discontinued';
   description?: string;
   min_stock: number;
@@ -25,6 +26,7 @@ export interface Material {
   // Joined fields
   category?: MaterialCategory;
   unit_obj?: Unit;
+  supplier?: Supplier;
 }
 
 export interface MaterialCategory {
@@ -124,6 +126,7 @@ export interface MaterialFormData {
   specification: string;
   unit_id: string;
   category_id: string;
+  supplier_id?: string | null; // 默认供应商（用于批次/条码打印自动带出）
   min_stock: number;
   max_stock: number;
   description?: string;

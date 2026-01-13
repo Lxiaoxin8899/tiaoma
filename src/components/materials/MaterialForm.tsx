@@ -4,6 +4,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useMaterialStore } from '../../stores/materialStore';
 import { Material, MaterialFormData } from '../../types/database';
 import { useToast } from '../common/Toast';
+import SearchableSelect from '../common/SearchableSelect';
 
 interface MaterialFormProps {
   material?: Material | null;
@@ -11,8 +12,35 @@ interface MaterialFormProps {
   onSuccess: () => void;
 }
 
+type WeightUnit = 'g' | 'kg';
+
+const parseWeightToAmountAndUnit = (weight?: string): { amount: string; unit: WeightUnit } => {
+  // 说明：历史数据里 weight 可能是 "0.18KG"/"180g" 或者为空，这里尽量兼容解析成“数字 + 单位”
+  const trimmed = (weight || '').trim();
+  if (!trimmed) {
+    return { amount: '', unit: 'g' };
+  }
+
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*(kg|g)$/i);
+  if (match) {
+    return { amount: match[1], unit: match[2].toLowerCase() as WeightUnit };
+  }
+
+  // 兜底：提取数字部分，并根据是否包含 kg/g 判断单位
+  const amount = trimmed.match(/(\d+(?:\.\d+)?)/)?.[1] ?? '';
+  const unit: WeightUnit = /kg/i.test(trimmed) ? 'kg' : 'g';
+  return { amount, unit };
+};
+
+const formatWeightForStorage = (amount: string, unit: WeightUnit): string => {
+  // 说明：为保持与历史示例（如 "0.18KG"）一致，kg 用大写 "KG"，g 用小写 "g"
+  const trimmedAmount = amount.trim();
+  if (!trimmedAmount) return '';
+  return `${trimmedAmount}${unit === 'kg' ? 'KG' : 'g'}`;
+};
+
 const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSuccess }) => {
-  const { createMaterial, updateMaterial, categories, units, fetchCategories, fetchUnits, fetchSuppliers } = useMaterialStore();
+  const { createMaterial, updateMaterial, categories, units, suppliers, fetchCategories, fetchUnits, fetchSuppliers } = useMaterialStore();
   const { success, error: showError } = useToast();
   
   const [formData, setFormData] = useState<MaterialFormData>({
@@ -21,6 +49,8 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     specification: '',
     unit_id: '',
     category_id: '',
+    // 说明：一个物料编码只绑定一个供应商；后续新建批次/打印条码时默认带出，避免重复选择
+    supplier_id: null,
     status: 'active',
     description: '',
     min_stock: 0,
@@ -31,6 +61,10 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     main_ingredients: '食品用香料、食品用香精辅料',
     shelf_life: '12个月'
   });
+
+  // 说明：重量字段在标签上需要打印单位，因此 UI 采用“数字 + 单位(g/kg)”录入，提交时再合成到 weight 字段
+  const [weightAmount, setWeightAmount] = useState<string>('');
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>('g');
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -43,12 +77,14 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
 
   useEffect(() => {
     if (material) {
+      const parsedWeight = parseWeightToAmountAndUnit(material.weight);
       setFormData({
         code: material.code,
         name: material.name,
         specification: material.specification || '',
         unit_id: material.unit_id,
         category_id: material.category_id,
+        supplier_id: material.supplier_id ?? null,
         status: material.status,
         description: material.description || '',
         min_stock: material.min_stock,
@@ -59,6 +95,12 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
         main_ingredients: material.main_ingredients || '',
         shelf_life: material.shelf_life || ''
       });
+      setWeightAmount(parsedWeight.amount);
+      setWeightUnit(parsedWeight.unit);
+    } else {
+      // 新建时给重量单位一个默认值，减少用户操作
+      setWeightAmount('');
+      setWeightUnit('g');
     }
   }, [material]);
 
@@ -79,6 +121,10 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     
     if (!formData.category_id) {
       newErrors.category_id = '请选择分类';
+    }
+
+    if (!formData.supplier_id) {
+      newErrors.supplier_id = '请选择供应商';
     }
     
     if (formData.min_stock < 0) {
@@ -103,11 +149,17 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     setLoading(true);
     
     try {
+      // 说明：提交前将“重量数字 + 单位”合成到 weight 字段，保证打印时能直接带出单位
+      const submitData: MaterialFormData = {
+        ...formData,
+        weight: formatWeightForStorage(weightAmount, weightUnit)
+      };
+
       let result;
       if (material) {
-        result = await updateMaterial(material.id, formData);
+        result = await updateMaterial(material.id, submitData);
       } else {
-        result = await createMaterial(formData);
+        result = await createMaterial(submitData);
       }
       
       if (result) {
@@ -262,6 +314,34 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
                 {errors.unit_id && <p className="mt-1 text-sm text-red-600">{errors.unit_id}</p>}
               </div>
 
+              {/* 默认供应商（一个物料编码只对应一个供应商） */}
+              <div>
+                {/* 说明：供应商数量多时下拉难找，这里改为可搜索选择 */}
+                <SearchableSelect
+                  label="供应商"
+                  required
+                  value={formData.supplier_id || ''}
+                  onChange={(value) => {
+                    setFormData(prev => ({ ...prev, supplier_id: value || null }));
+                    // 清除对应字段的错误
+                    if (errors.supplier_id) {
+                      setErrors(prev => {
+                        const next = { ...prev };
+                        delete next.supplier_id;
+                        return next;
+                      });
+                    }
+                  }}
+                  options={suppliers.map(supplier => ({
+                    id: supplier.id,
+                    label: `${supplier.code} - ${supplier.name}`,
+                    subtitle: supplier.contact_person ? `联系人：${supplier.contact_person}` : undefined
+                  }))}
+                  placeholder="搜索供应商编码、名称..."
+                  error={errors.supplier_id}
+                />
+              </div>
+
               <div className="md:col-span-2">
                 <label htmlFor="specification" className="block text-sm font-medium text-gray-700 mb-1">
                   规格型号
@@ -340,15 +420,28 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
                 <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-1">
                   重量
                 </label>
-                <input
-                  type="text"
-                  id="weight"
-                  name="weight"
-                  value={formData.weight}
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="如：0.18KG"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    id="weight"
+                    value={weightAmount}
+                    onChange={(e) => setWeightAmount(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="请输入数字，如：0.18"
+                    min="0"
+                    step="0.001"
+                  />
+                  <select
+                    value={weightUnit}
+                    onChange={(e) => setWeightUnit(e.target.value as WeightUnit)}
+                    className="w-28 rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    aria-label="重量单位"
+                  >
+                    <option value="g">g</option>
+                    <option value="kg">kg</option>
+                  </select>
+                </div>
+                {/* 说明：保存时会自动合成为 "0.18KG"/"180g"，用于标签打印 */}
               </div>
 
               <div>

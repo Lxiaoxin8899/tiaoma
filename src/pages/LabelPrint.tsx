@@ -162,8 +162,11 @@ const LabelPrint: React.FC = () => {
   const selectedBatch = batches.find(b => b.id === selectedBatchId);
   const materialBatches = batches.filter(b => b.material_id === selectedMaterialId);
 
-  // 获取供应商信息（优先使用批次中的联表数据）
-  const getSupplierInfo = (batch?: typeof selectedBatch): { code: string; name: string } => {
+  // 获取供应商信息（优先使用批次中的联表数据；否则使用物料绑定的默认供应商）
+  const getSupplierInfo = (
+    batch?: typeof selectedBatch,
+    material?: typeof selectedMaterial,
+  ): { code: string; name: string } => {
     // 首先尝试从批次的联表数据中获取
     if (batch?.supplier) {
       const supplier = batch.supplier as { id?: string; code?: string; name?: string };
@@ -184,6 +187,17 @@ const LabelPrint: React.FC = () => {
       }
     }
 
+    // 新建批次（或历史批次没填 supplier_id）时：使用物料绑定的默认供应商
+    if (material?.supplier_id && suppliers.length > 0) {
+      const supplier = suppliers.find(s => s.id === material.supplier_id);
+      if (supplier) {
+        return {
+          code: supplier.code || '-',
+          name: supplier.name || '-'
+        };
+      }
+    }
+
     return { code: '-', name: '-' };
   };
 
@@ -193,9 +207,21 @@ const LabelPrint: React.FC = () => {
 
     let baseData: LabelPrintData | null = null;
 
+    // 说明：打印页新建批次时也应保留供应商信息：优先物料默认供应商，其次沿用该物料最近批次的供应商
+    const getDefaultSupplierInfoForMaterial = (): { code: string; name: string } => {
+      // 先用物料绑定的默认供应商
+      const fromMaterial = getSupplierInfo(undefined, selectedMaterial);
+      if (fromMaterial.code !== '-' || fromMaterial.name !== '-') return fromMaterial;
+
+      // 再沿用当前物料的最近批次（fetchBatches 默认按 created_at 倒序）
+      const latestBatch = materialBatches.find(b => !!b.supplier_id || !!b.supplier);
+      const fromLatestBatch = getSupplierInfo(latestBatch, selectedMaterial);
+      return fromLatestBatch;
+    };
+
     // 如果有选中的批次，使用批次数据
     if (selectedBatch) {
-      const supplierInfo = getSupplierInfo(selectedBatch);
+      const supplierInfo = getSupplierInfo(selectedBatch, selectedMaterial);
       // 确保 barcode 数据是字符串类型
       const materialCode = String(selectedMaterial.code || '');
       const batchNumber = String(selectedBatch.batch_number || '');
@@ -222,11 +248,12 @@ const LabelPrint: React.FC = () => {
       const batchNumber = newBatchData.batch_number || '';
       // 确保 barcode 数据是字符串类型
       const materialCode = String(selectedMaterial.code || '');
+      const supplierInfo = getDefaultSupplierInfoForMaterial();
 
       baseData = {
         company_name: labelConfig.companyName || settings?.company_name || '深圳市颖灿生物科技有限公司',
-        supplier_code: '-',
-        supplier_name: '-',
+        supplier_code: supplierInfo.code,
+        supplier_name: supplierInfo.name,
         product_name: selectedMaterial.name,
         product_code: selectedMaterial.code,
         weight: selectedMaterial.weight,
