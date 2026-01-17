@@ -11,8 +11,8 @@ interface ConnectivityState {
 
 /**
  * 连接状态 Hook：
- * - local：显式离线模式（VITE_OFFLINE=true 或开发环境缺少 Supabase 配置）
- * - online/offline：在线模式下，基于 supabase.isOnline() 的健康探测结果
+ * - local：单机本地模式（生产 Electron：SQLite；浏览器调试：localStorage）
+ * - online/offline：保留类型以兼容历史 UI（当前版本不启用线上模式）
  * - checking：首次加载/重新探测中
  */
 export const useConnectivity = (): ConnectivityState => {
@@ -43,6 +43,13 @@ export const useConnectivity = (): ConnectivityState => {
   }, [check])
 
   useEffect(() => {
+    // 说明：单机模式不需要网络探测与定时器，避免无意义的轮询
+    if (isOfflineMode) {
+      setStatus('local')
+      setLastCheckedAt(Date.now())
+      return
+    }
+
     void check()
 
     // 说明：监听浏览器网络事件，尽快刷新状态
@@ -72,4 +79,3 @@ export const useConnectivity = (): ConnectivityState => {
     [status, lastCheckedAt, recheck],
   )
 }
-

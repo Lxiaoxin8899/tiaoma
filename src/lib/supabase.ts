@@ -1,23 +1,17 @@
-﻿import { createClient } from '@supabase/supabase-js';
 import { createLocalClient } from './localSupabase';
 
-interface SupabaseConfig {
-  auth: {
-    persistSession: boolean;
-    autoRefreshToken: boolean;
-    detectSessionInUrl: boolean;
-    storage: Storage;
-    storageKey: string;
-  };
-  global: {
-    headers: Record<string, string>;
-  };
-  db: {
-    schema: string;
-  };
-}
+// =============================================================================
+// 单机模式说明
+//
+// 目前客户侧交付形态为 Windows 安装包单机软件，不存在“线上模式”。
+// 为避免：
+// - 因环境变量缺失导致生产包直接报错
+// - 因不同模式切换导致数据源混乱（线上/离线两套数据）
+// 这里将模式固定为“本地模式”（Electron：SQLite；浏览器调试：localStorage）。
+// =============================================================================
+export const isOfflineMode = true;
 
-// 约束 stores/components 依赖的最小 Supabase API（在线/离线共用）
+// 约束 stores/components 依赖的最小 Supabase API（单机共用）
 export interface SupabaseUserLike {
   id: string;
   email?: string;
@@ -51,7 +45,7 @@ export interface SupabaseQueryResponse {
   count?: number | null;
 }
 
-// supabase-js 的 query builder 是 PromiseLike（可直接 await），离线模式也按此实现
+// supabase-js 的 query builder 是 PromiseLike（可直接 await），单机模式也按此实现
 export type SupabaseQueryBuilder = PromiseLike<SupabaseQueryResponse> & {
   select: (...args: unknown[]) => SupabaseQueryBuilder;
   order: (...args: unknown[]) => SupabaseQueryBuilder;
@@ -73,79 +67,15 @@ export interface SupabaseLikeClient {
   isOnline: () => Promise<boolean>;
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const hasSupabaseConfig = !!supabaseUrl && !!supabaseAnonKey;
-// 离线模式开关：
-// - 显式设置 VITE_OFFLINE=true
-// - 开发环境下若缺少 Supabase 配置，自动启用本地模式（避免开发时页面直接不可用）
-export const isOfflineMode =
-  (import.meta.env.VITE_OFFLINE === 'true') ||
-  (!import.meta.env.PROD && !hasSupabaseConfig);
-
-// 生产环境必须显式配置 Supabase（或显式启用离线模式），避免误用不安全的本地模式进入生产
-if (import.meta.env.PROD && !hasSupabaseConfig && !isOfflineMode) {
-  throw new Error('缺少 Supabase 配置：请设置 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY（或显式设置 VITE_OFFLINE=true）。');
-}
-
-if (isOfflineMode) {
-  console.warn('当前处于离线本地模式：Supabase 将由 localStorage 模拟。');
-  if (import.meta.env.PROD) {
-    console.warn('警告：生产环境启用离线模式会降低安全性（本地数据与认证无法达到线上同等级别）。');
-  }
-}
-
-const config: SupabaseConfig = {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: localStorage,
-    storageKey: 'material-management-system',
-  },
-  global: {
-    headers: {
-      'x-application-name': 'material-management-system',
-    },
-  },
-  db: {
-    schema: 'public',
-  },
-};
-
-// 说明：这里使用“最小能力接口”做类型收敛，避免 supabase-js 复杂泛型在项目里扩散。
-let baseClient: SupabaseLikeClient;
-if (isOfflineMode) {
-  baseClient = createLocalClient() as unknown as SupabaseLikeClient;
-} else {
-  const client = createClient(supabaseUrl, supabaseAnonKey, config);
-  const onlineClient = client as unknown as SupabaseLikeClient;
-
-  // 为真实 Supabase 客户端补充 isOnline 方法（用于在线/离线逻辑分支）
-  onlineClient.isOnline = async () => {
-    try {
-      // 说明：getSession() 不会发起网络请求，无法判断真实网络状态；这里用轻量 health check。
-      // Supabase Auth 提供 /auth/v1/health，可用于快速探活。
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        return false;
-      }
-
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(`${supabaseUrl}/auth/v1/health`, { signal: controller.signal });
-      clearTimeout(timer);
-      return res.ok;
-    } catch {
-      return false;
-    }
-  };
-
-  baseClient = onlineClient;
-}
+// 说明：这里使用“最小能力接口”做类型收敛，避免外部依赖复杂类型在项目里扩散。
+const baseClient: SupabaseLikeClient = createLocalClient() as unknown as SupabaseLikeClient;
 
 export const supabase: SupabaseLikeClient = baseClient;
 
-// 错误处理函数
+// =============================================================================
+// 错误/校验工具（沿用 supabase.ts 对外 API）
+// =============================================================================
+
 export interface ValidationRule {
   required?: boolean;
   minLength?: number;
@@ -164,48 +94,47 @@ export interface ValidationError {
 }
 
 export const handleError = (error: unknown): Error => {
-  console.error('Supabase error:', error);
+  console.error('操作失败:', error);
   const errObj = error as { code?: string; message?: string };
-  
+
   if (errObj?.code === 'PGRST116') {
     return new Error('没有权限访问此资源');
   }
-  
+
   if (errObj?.code === '23505') {
     return new Error('数据已存在，请勿重复添加');
   }
-  
+
   if (errObj?.code === '23503') {
     return new Error('关联数据不存在');
   }
-  
+
   return new Error(errObj?.message || '操作失败，请稍后重试');
 };
 
-// 数据验证函数
 export const validateData = (data: Record<string, unknown>, schema: ValidationSchema): ValidationError[] => {
   const errors: ValidationError[] = [];
-  
-  Object.keys(schema).forEach(key => {
+
+  Object.keys(schema).forEach((key) => {
     const rules = schema[key];
     const value = data[key];
-    
+
     if (rules.required && (value === undefined || value === null || value === '')) {
       errors.push({ field: key, message: `${key} 是必填项` });
     }
-    
+
     if (value && rules.minLength && typeof value === 'string' && value.length < rules.minLength) {
       errors.push({ field: key, message: `${key} 最少需要 ${rules.minLength} 个字符` });
     }
-    
+
     if (value && rules.maxLength && typeof value === 'string' && value.length > rules.maxLength) {
       errors.push({ field: key, message: `${key} 最多允许 ${rules.maxLength} 个字符` });
     }
-    
+
     if (value && rules.pattern && typeof value === 'string' && !rules.pattern.test(value)) {
       errors.push({ field: key, message: `${key} 格式不正确` });
     }
-    
+
     if (value && rules.type) {
       switch (rules.type) {
         case 'email': {
@@ -225,7 +154,7 @@ export const validateData = (data: Record<string, unknown>, schema: ValidationSc
       }
     }
   });
-  
+
   return errors;
 };
 

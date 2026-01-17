@@ -1,12 +1,12 @@
 ﻿# 物料管理与条码生成系统
 
-一个基于 React + TypeScript + Supabase 的现代化物料管理系统，支持完整的物料生命周期管理、批次跟踪、条码生成和供应商管理。
+一个基于 Electron + React + TypeScript + SQLite 的单机物料与条码管理系统，支持物料生命周期管理、批次跟踪、条码生成和供应商管理。
 
 ![React](https://img.shields.io/badge/React-18.3.1-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-6.3.5-646cff)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-06b6d4)
-![Supabase](https://img.shields.io/badge/Supabase-2.87.1-3ecf8e)
+![Electron](https://img.shields.io/badge/Electron-39.x-47848f)
 
 ## ✨ 功能特性
 
@@ -21,7 +21,7 @@
 
 ### 🔐 权限管理
 - **多角色支持**: 管理员、经理、操作员、查看者四种角色
-- **行级安全**: 基于 Supabase RLS 的细粒度权限控制
+- **权限控制**: 单机模式下基于本地角色字段做前端权限控制（非强安全边界）
 - **操作审计**: 完整的操作审计日志系统，记录用户的所有关键操作
   - 支持按时间、用户、模块、操作类型筛选
   - 自动记录 IP 地址和详细操作内容
@@ -46,7 +46,7 @@
 - **TypeScript 5.8.3** - 类型安全的 JavaScript
 - **Vite 6.3.5** - 快速的构建工具
 - **Tailwind CSS 3.4.17** - 实用优先的 CSS 框架
-- **React Router 7.3.0** - 客户端路由
+- **React Router 7.12.0** - 客户端路由
 - **Zustand 5.0.3** - 轻量级状态管理
 - **React Hot Toast 2.6.0** - 优雅的通知组件
 
@@ -56,10 +56,9 @@
 - **Lucide React 0.511.0** - 现代化图标库
 - **Recharts 3.5.1** - React 图表库
 
-### 后端
-- **Supabase 2.87.1** - 开源的 Firebase 替代品
-- **PostgreSQL** - 可靠的关系型数据库
-- **行级安全 (RLS)** - 数据级权限控制
+### 桌面端与存储
+- **Electron 39.x** - 桌面端容器
+- **SQLite（better-sqlite3）** - 单机本地数据库（WAL）
 
 ### 条码处理
 - **JsBarcode 3.12.1** - 条码生成
@@ -67,7 +66,7 @@
 - **Canvas API** - 图形绘制
 
 ### 数据处理
-- **XLSX** - Excel 文件读写，支持批量导入导出
+- **ExcelJS** - Excel 文件读写，支持批量导入导出
 - **File-Saver 2.0.5** - 文件保存
 
 ## 📦 安装与运行
@@ -134,11 +133,8 @@ npm run lint
 创建 `.env.local` 文件并配置以下变量：
 
 ```env
-# Supabase 配置
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# 离线模式 (可选)
+# 单机模式说明：生产环境数据落在本机 SQLite（%AppData%\\tiaoma\\tiaoma.sqlite3）
+# 说明：历史版本曾支持 Supabase 在线模式；现已移除，避免误配置导致数据源分裂
 VITE_OFFLINE=false
 
 # 开发模式配置 (可选)
@@ -154,16 +150,9 @@ VITE_ENABLE_CODE_SPLITTING=true
 VITE_DEFAULT_THEME=auto
 ```
 
-### 获取 Supabase 配置
-1. 在 [Supabase](https://supabase.com) 创建新项目
-2. 在项目设置 > API 中获取：
-   - Project URL
-   - anon public key
-
-### 离线模式
-当无法连接到 Supabase 或配置缺失时，应用会自动切换到离线模式，使用本地存储作为数据源。
-
-> 注意：离线模式仅用于纯本地使用/演示，认证与数据在本地可被篡改；当前实现会自动使用本地预置账号进入系统。
+### 单机数据位置与备份
+- 主数据：`%AppData%\\tiaoma\\tiaoma.sqlite3`
+- 自动备份目录：`%AppData%\\tiaoma\\backups\\`（可在“系统设置”里调整频率与保留天数）
 
 ## 🗄️ 数据库结构
 
@@ -183,7 +172,7 @@ VITE_DEFAULT_THEME=auto
 - **operator** - 操作员：创建和更新批次、条码
 - **viewer** - 查看者：只读权限
 
-详细数据库结构请参考 `supabase/migrations/` 目录下的 SQL 文件。
+说明：`supabase/migrations/` 为历史在线版遗留，仅作参考；当前单机版以应用内的表名（materials/material_batches/barcodes 等）为准。
 
 ## 📁 项目结构
 
@@ -229,8 +218,8 @@ pnpm preview
 
 ## 🔒 安全特性
 
-- **行级安全 (RLS)**: 数据库级别的访问控制
-- **JWT 认证**: 基于 Supabase 的安全认证
+- **单机权限边界**: 数据与权限均在本机，安全边界依赖 Windows 用户/文件权限（非服务端强隔离）
+- **回收站与备份**: 关键业务表默认软删除 + 自动备份，降低误删/误操作导致不可恢复的风险
 - **输入验证**: 前后端双重数据验证
 - **SQL 注入防护**: 使用参数化查询
 - **XSS 防护**: React 内置的 XSS 保护
@@ -289,7 +278,7 @@ chore: 构建过程或辅助工具变动
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+当前仓库未提供 `LICENSE` 文件；如需对外分发/开源，请补充明确的许可证文本并在此处更新说明。
 
 ## 🆘 常见问题
 
@@ -312,7 +301,7 @@ A: 先关闭正在运行的 Electron/Node 进程，再删除 `node_modules` 后�
 
 如果遇到问题或需要帮助，请：
 - 提交 [Issue](../../issues)
-- 查看 [文档](./docs/)
+- 查看本 README 的相关章节（环境变量配置 / 数据库结构 / 批量导入使用指南）
 - 联系开发团队
 
 ## 🎯 路线图

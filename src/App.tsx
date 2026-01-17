@@ -1,6 +1,5 @@
 ﻿import React from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './stores/authStore';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -8,7 +7,6 @@ import { Toaster } from 'react-hot-toast';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
 // 说明：路由级懒加载，降低首屏包体与首次解析开销（配合 Vite 代码分割效果更佳）
-const LoginPage = React.lazy(() => import('./components/auth/LoginPage'));
 import Home from './pages/Home';
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const MaterialManagement = React.lazy(() => import('./pages/MaterialManagement'));
@@ -24,9 +22,6 @@ const AuditLogs = React.lazy(() => import('./pages/AuditLogs'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 
 function App() {
-  // 说明：isAuthenticated 是方法，不是布尔值
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
-
   // 说明：Electron 打包后使用自定义协议 app:// 或 file://，BrowserRouter 刷新/深链会找不到文件；用 HashRouter 更稳妥。
   // 检测是否在 Electron 环境中（非 http/https 协议）
   const isElectron = !window.location.protocol.startsWith('http');
@@ -47,13 +42,7 @@ function App() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
           <React.Suspense fallback={<LoadingSpinner className="min-h-[60vh]" />}>
             <Routes>
-                {/* 公开路由：登录 */}
-                <Route
-                  path="/login"
-                  element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
-                />
-
-                {/* 受保护路由：登录后才可访问 */}
+                {/* 单机版：不需要登录页；这里用 ProtectedRoute 仅做“会话初始化”，不做拦截 */}
                 <Route
                   element={
                     <ProtectedRoute>

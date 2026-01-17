@@ -1,0 +1,10 @@
+﻿version: "3.9"
+services:
+  web:
+    # 说明：前端生产容器，构建后由 Nginx 提供静态服务
+    build:
+      context: ..
+      dockerfile: docker/web/Dockerfile.prod
+    ports:
+      - "8080:80"
+    restart: unless-stopped

@@ -206,7 +206,7 @@ export function exportToCSV<T extends object>(
   // 生成 CSV 内容（不再依赖 xlsx，避免引入高危依赖）
   const escapeCsvCell = (v: unknown) => {
     const s = String(v ?? '');
-    const escaped = s.replace(/\"/g, '""');
+    const escaped = s.replace(/"/g, '""');
     return /[",\n\r]/.test(escaped) ? `"${escaped}"` : escaped;
   };
 
@@ -290,7 +290,7 @@ export const downloadMaterialTemplate = async (): Promise<void> => {
     ws,
     templateData.map((r) => {
       const row: Record<string, unknown> = {};
-      for (const h of templateHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      for (const h of templateHeaders) row[h] = sanitizeSpreadsheetCell((r as Record<string, unknown>)[h]);
       return row;
     }),
     templateHeaders,
@@ -315,7 +315,7 @@ export const downloadMaterialTemplate = async (): Promise<void> => {
     instructionsWs,
     instructionsData.map((r) => {
       const row: Record<string, unknown> = {};
-      for (const h of instructionsHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      for (const h of instructionsHeaders) row[h] = sanitizeSpreadsheetCell((r as Record<string, unknown>)[h]);
       return row;
     }),
     instructionsHeaders,
@@ -374,7 +374,7 @@ export const downloadSupplierTemplate = async (): Promise<void> => {
     ws,
     templateData.map((r) => {
       const row: Record<string, unknown> = {};
-      for (const h of templateHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      for (const h of templateHeaders) row[h] = sanitizeSpreadsheetCell((r as Record<string, unknown>)[h]);
       return row;
     }),
     templateHeaders,
@@ -397,7 +397,7 @@ export const downloadSupplierTemplate = async (): Promise<void> => {
     instructionsWs,
     instructionsData.map((r) => {
       const row: Record<string, unknown> = {};
-      for (const h of instructionsHeaders) row[h] = sanitizeSpreadsheetCell((r as any)[h]);
+      for (const h of instructionsHeaders) row[h] = sanitizeSpreadsheetCell((r as Record<string, unknown>)[h]);
       return row;
     }),
     instructionsHeaders,

@@ -441,7 +441,7 @@ export const exportErrorReport = async (
   const headers = ['行号', '字段', '值', '错误信息'];
   ws.addRow(headers);
   for (const row of errorData) {
-    ws.addRow(headers.map((h) => (row as any)[h]));
+    ws.addRow(headers.map((h) => (row as Record<string, unknown>)[h]));
   }
   ws.columns = [
     { header: '行号', key: '行号', width: 8 },

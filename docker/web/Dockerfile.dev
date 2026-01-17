@@ -1,0 +1,25 @@
+﻿FROM node:20-bullseye
+
+# 说明：安装构建依赖，避免 better-sqlite3 编译失败
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
+# 说明：启用 pnpm（通过 corepack）
+RUN corepack enable
+
+WORKDIR /app
+
+# 说明：先复制依赖描述文件以提升缓存命中
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# 说明：安装依赖（包含开发依赖）
+RUN pnpm install --frozen-lockfile
+
+# 说明：复制源码（开发时会被 volume 覆盖）
+COPY . .
+
+EXPOSE 5173
+
+# 说明：命令由 docker-compose 覆盖，这里作为兜底
+CMD ["pnpm", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

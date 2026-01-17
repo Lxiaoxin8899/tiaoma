@@ -4,6 +4,7 @@ import App from './App'
 import './index.css'
 import './init/authInit'
 import './init/errorInit'
+import './init/backupInit'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

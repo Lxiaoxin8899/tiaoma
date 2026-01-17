@@ -20,6 +20,11 @@ release
 .claude/
 .tools/
 导入完成
+AUDIT_REVIEW.md
+AUDIT_REVIEW.json
+
+# Certificate
+cert.pfx
 
 # Editor directories and files
 .vscode/*

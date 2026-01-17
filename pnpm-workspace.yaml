@@ -2,3 +2,5 @@ onlyBuiltDependencies:
   - esbuild
   - electron
   - electron-winstaller
+  # 说明：单机 SQLite 存储需要 native 模块构建（better-sqlite3）
+  - better-sqlite3

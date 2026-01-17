@@ -1,5 +1,4 @@
 ﻿import { create } from 'zustand';
-import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { User, UserFormData, UserQueryParams } from '../types/database';
 import { errorHandler, reportError } from '../lib/errorHandler';
@@ -115,102 +114,38 @@ export const useUserStore = create<UserState>((set, get) => ({
         return null;
       }
 
-      const isOffline = !(await supabase.isOnline());
-      if (isOffline) {
-        // 离线模式：直接写入本地 users 表，不触碰 auth 会话（本地 auth 不校验密码）
-        const exists = get().users.some((u) => u.email === data.email || u.username === data.username);
-        if (exists) {
-          throw new Error('用户已存在（邮箱或用户名重复）');
-        }
-
-        const id =
-          (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-            ? crypto.randomUUID()
-            : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id,
-              email: data.email,
-              username: data.username,
-              full_name: data.full_name,
-              role: data.role,
-              status: data.status || 'active',
-              department: data.department,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ])
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        await get().fetchUsers({ page: get().currentPage });
-        set({ loading: false });
-        return (newUser as User) || null;
+      // 说明：单机模式：直接写入本地 users 表（主存储为 SQLite），不启用线上注册流程。
+      const exists = get().users.some((u) => u.email === data.email || u.username === data.username);
+      if (exists) {
+        throw new Error('用户已存在（邮箱或用户名重复）');
       }
 
-      // 说明：直接使用主 client 执行 signUp 会污染当前会话（可能导致管理员被“切换”为新用户）。
-      // 这里用一个“临时 client”（persistSession=false）创建账号，避免影响当前登录态。
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+      const id =
+        (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+          ? crypto.randomUUID()
+          : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('缺少 Supabase 配置，无法在线创建用户（请检查 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY）');
-      }
-
-      const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      });
-
-      const { data: signUpData, error: signUpError } = await tempClient.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id,
+            email: data.email,
             username: data.username,
             full_name: data.full_name,
-            // 注意：role/status 等敏感字段以 users 表为准；这里只作为“注册信息”保留
             role: data.role,
             status: data.status || 'active',
             department: data.department,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
-        },
-      });
-
-      if (signUpError) throw signUpError;
-      const createdAuthUserId = signUpData.user?.id;
-      if (!createdAuthUserId) {
-        throw new Error('创建用户失败：未返回用户数据');
-      }
-
-      // 说明：数据库侧触发器会在 auth.users 创建后自动写入 public.users；这里再补充 role/status 等字段。
-      const { data: newUser, error: updateProfileError } = await supabase
-        .from('users')
-        .update({
-          username: data.username,
-          full_name: data.full_name,
-          role: data.role,
-          status: data.status || 'active',
-          department: data.department,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', createdAuthUserId)
+        ])
         .select()
         .single();
 
-      if (updateProfileError) throw updateProfileError;
+      if (insertError) throw insertError;
 
-      // 重新拉取列表
       await get().fetchUsers({ page: get().currentPage });
-
       set({ loading: false });
       return (newUser as User) || null;
     } catch (err) {

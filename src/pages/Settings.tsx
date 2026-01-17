@@ -14,6 +14,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
 import { useTheme } from '../hooks/useTheme';
 import type { SystemSettingsFormData } from '../types/database';
+import { openBackupFolder, saveBackupNow } from '../lib/backup';
+import RecycleBinModal from '../components/common/RecycleBinModal';
 
 interface SettingsPageProps {
   className?: string;
@@ -28,6 +30,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
   const [activeTab, setActiveTab] = useState('general');
   const [showConfigForm, setShowConfigForm] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<SystemSettingsFormData | null>(null);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -93,6 +96,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
     setShowConfigForm(false);
     setSelectedConfig(null);
     clearError();
+  };
+
+  const handleBackupNow = async () => {
+    try {
+      const retentionDays = settings?.data_retention_days ?? 365;
+      const r = await saveBackupNow({ retentionDays });
+      if (r.ok) {
+        setSuccess(`已生成备份：${r.path || ''}`);
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        console.error('备份失败:', r.error);
+      }
+    } catch (e) {
+      console.error('备份失败:', e);
+    }
+  };
+
+  const handleOpenBackupFolder = async () => {
+    try {
+      await openBackupFolder();
+    } catch (e) {
+      console.error('打开备份目录失败:', e);
+    }
   };
 
   const getStatusValue = (category: string, key: string): boolean | string | number => {
@@ -342,6 +368,36 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
               </div>
             ))}
           </div>
+
+          {/* 单机数据保护工具：仅在“系统设置”页展示 */}
+          {activeTab === 'system' && (
+            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-6">
+              <h4 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">数据保护（单机模式）</h4>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleBackupNow}
+                  className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700"
+                >
+                  立即备份
+                </button>
+                <button
+                  onClick={handleOpenBackupFolder}
+                  className="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  打开备份目录
+                </button>
+                <button
+                  onClick={() => setShowRecycleBin(true)}
+                  className="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  回收站
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+                说明：删除操作会进入回收站；系统会按设置中的“备份频率/保留天数”自动备份本地数据。
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -352,6 +408,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
           activeTab={activeTab}
           onClose={handleConfigClose}
           onSubmit={handleConfigSubmit}
+        />
+      )}
+
+      {showRecycleBin && (
+        <RecycleBinModal
+          onClose={() => setShowRecycleBin(false)}
         />
       )}
 

@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   Bars3Icon,
   XMarkIcon,
@@ -8,7 +8,6 @@ import {
   QrCodeIcon,
   UserGroupIcon,
   CogIcon,
-  ArrowRightOnRectangleIcon,
   UserCircleIcon,
   ChartBarIcon,
   TruckIcon,
@@ -23,9 +22,8 @@ import { useConnectivity } from '../../hooks/useConnectivity';
 import { useTheme } from '../../hooks/useTheme';
 
 const Layout: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut, hasPermission } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
   const { status: connectivityStatus, lastCheckedAt, recheck } = useConnectivity();
   const { theme, toggleTheme, isDark } = useTheme();
 
@@ -50,10 +48,7 @@ const Layout: React.FC = () => {
     hasPermission(item.permission)
   );
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
-  };
+  // 说明：单机版不需要登录/退出登录；如未来需要“切换用户”，可在此处扩展为用户选择器。
 
   const isActive = (path: string) => {
     // 说明：支持二级页面高亮（如 /materials/:id 仍高亮“物料管理”）
@@ -269,13 +264,6 @@ const Layout: React.FC = () => {
                       <UserCircleIcon className="h-4 w-4 inline mr-2" />
                       个人资料
                     </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                    >
-                      <ArrowRightOnRectangleIcon className="h-4 w-4 inline mr-2" />
-                      退出登录
-                    </button>
                   </div>
                 )}
               </div>

@@ -1,0 +1,24 @@
+﻿version: "3.9"
+services:
+  web:
+    # 说明：前端开发容器，使用 Vite 热更新
+    build:
+      context: ..
+      dockerfile: docker/web/Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      # 说明：让 Vite 在容器内对外暴露
+      - HOST=0.0.0.0
+      - VITE_DEBUG_MODE=true
+    volumes:
+      # 说明：挂载源码，支持热更新
+      - ..:/app
+      # 说明：依赖使用容器卷，避免污染宿主机
+      - node_modules:/app/node_modules
+    command: >
+      sh -c "pnpm install && pnpm dev -- --host 0.0.0.0 --port 5173"
+
+volumes:
+  node_modules:
+    # 说明：持久化 node_modules，避免每次重新安装
