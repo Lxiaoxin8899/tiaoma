@@ -36,3 +36,5 @@ cert.pfx
 *.njsproj
 *.sln
 *.sw?
+
+docker/supabase/supabase.env

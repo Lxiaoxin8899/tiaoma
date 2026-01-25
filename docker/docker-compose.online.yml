@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+  db:
+    # 说明：PostgreSQL 数据库（使用 Supabase 官方镜像，与 online.db.yml 保持一致）
+    image: supabase/postgres:15.1.1.41
+    container_name: tiaoma-db
+    env_file:
+      - ./supabase/supabase.env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "54322:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./supabase/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  rest:
+    # 说明：PostgREST 提供 Supabase 风格 REST API
+    image: postgrest/postgrest:v12.2.3
+    container_name: tiaoma-rest
+    env_file:
+      - ./supabase/supabase.env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+    healthcheck:
+      test: ["CMD", "/bin/postgrest", "--help"]
+      timeout: 5s
+      interval: 10s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  auth:
+    # 说明：GoTrue 负责账号体系与 JWT
+    image: supabase/gotrue:v2.143.0
+    container_name: tiaoma-auth
+    env_file:
+      - ./supabase/supabase.env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_API_HOST: 0.0.0.0
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  gateway:
+    # 说明：统一对外暴露 /rest/v1 与 /auth/v1
+    image: nginx:alpine
+    container_name: tiaoma-gateway
+    depends_on:
+      rest:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./supabase/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
+volumes:
+  db_data:

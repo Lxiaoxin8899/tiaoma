@@ -1,0 +1,47 @@
+﻿version: "3.9"
+
+services:
+  db:
+    # 说明：仅在需要本地数据库容器时启用
+    image: supabase/postgres:15.1.1.41
+    container_name: tiaoma-db
+    env_file:
+      - ./supabase/supabase.env
+    ports:
+      # 说明：仅用于本地调试（可按需关闭或改端口）
+      - "54322:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rest:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  auth:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  migrate:
+    # 说明：启动时执行 Supabase 迁移脚本（仅运行一次）
+    image: postgres:15-alpine
+    container_name: tiaoma-migrate
+    env_file:
+      - ./supabase/supabase.env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../supabase/migrations:/migrations:ro
+      - ./supabase/migrate.sh:/migrate.sh:ro
+    entrypoint: ["/bin/sh", "/migrate.sh"]
+    restart: "no"
+
+volumes:
+  db_data:

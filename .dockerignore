@@ -1,0 +1,35 @@
+# 依赖目录（容器内重新安装）
+node_modules
+
+# 构建产物
+dist
+dist-ssr
+release
+
+# 环境变量（敏感信息）
+.env
+.env.*
+!.env.example
+
+# 日志
+logs
+*.log
+
+# 编辑器/IDE
+.vscode
+.idea
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# 本地工具
+.claude
+.tools
+
+# Electron 相关（Docker 不需要）
+cert.pfx
+
+# Docker 自身配置（避免递归）
+docker/supabase/supabase.env
