@@ -1,4 +1,4 @@
-﻿FROM node:20-bullseye AS builder
+FROM node:20-bullseye AS builder
 
 # 说明：安装构建依赖，避免 better-sqlite3 编译失败
 RUN apt-get update \
@@ -18,6 +18,9 @@ RUN pnpm install --frozen-lockfile
 
 # 说明：复制源码并构建
 COPY . .
+
+# 说明：禁用代码分割，避免 React 加载顺序问题导致白屏
+ENV VITE_ENABLE_CODE_SPLITTING=false
 RUN pnpm build
 
 FROM nginx:1.27-alpine

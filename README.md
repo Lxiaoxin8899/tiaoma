@@ -133,8 +133,13 @@ npm run lint
 创建 `.env.local` 文件并配置以下变量：
 
 ```env
-# 单机模式说明：生产环境数据落在本机 SQLite（%AppData%\\tiaoma\\tiaoma.sqlite3）
-# 说明：历史版本曾支持 Supabase 在线模式；现已移除，避免误配置导致数据源分裂
+# 数据模式配置
+# offline：本地 SQLite/localStorage；online：Supabase 风格 API
+VITE_DATA_MODE=offline
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+
+# 兼容旧配置 (可选)
 VITE_OFFLINE=false
 
 # 开发模式配置 (可选)

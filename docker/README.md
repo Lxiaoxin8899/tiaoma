@@ -3,21 +3,26 @@
 ## 现状分析
 - 当前前端为 React + Vite，桌面端用 Electron 包装。
 - 数据层以 Electron 主进程 SQLite 为主，浏览器调试回退 localStorage。
-- 代码中提供了本地 supabase 兼容层，但线上模式已被关闭。
+- 代码中提供了本地 supabase 兼容层，线上模式通过环境变量可切换。
 - 生产构建输出 dist/，Electron 通过 file:// 或自定义协议加载。
 
 ## 目标架构（服务器 + Docker）
 - web：React/Vite 构建产物，Nginx 提供静态服务。
-- api：新增 Node.js/TypeScript 服务，提供 REST/JSON API（或对接 Supabase）。
-- db：集中式数据库（建议 PostgreSQL），用于多用户并发与统一数据源。
+- api：Supabase 风格 API（PostgREST + GoTrue），提供 REST/认证能力。
+- db：集中式 PostgreSQL，用于多用户并发与统一数据源。
 - 备份/导出：改为后端统一处理，保留审计日志与备份能力。
 
 ## Docker 目录说明
 - docker/docker-compose.dev.yml：本地开发容器（仅前端）。
 - docker/docker-compose.prod.yml：生产构建容器（仅前端）。
+- docker/docker-compose.online.yml：线上后端（auth/rest/gateway，默认外部数据库）。
+- docker/docker-compose.online.db.yml：本地数据库容器补充（db/migrate）。
 - docker/web/Dockerfile.dev：前端开发镜像。
 - docker/web/Dockerfile.prod：前端生产镜像（多阶段构建）。
 - docker/web/nginx.conf：生产 Nginx 配置（SPA 路由回退）。
+- docker/supabase/supabase.env.example：线上后端环境变量示例（需复制为 supabase.env）。
+- docker/supabase/nginx.conf：API 网关配置（/rest/v1 与 /auth/v1）。
+- docker/supabase/migrate.sh：自动执行 supabase/migrations 的脚本。
 
 ## 开发模式（当前可用）
 1. 运行：`docker compose -f docker/docker-compose.dev.yml up --build`
@@ -28,6 +33,18 @@
 1. 运行：`docker compose -f docker/docker-compose.prod.yml up --build`
 2. 访问：`http://localhost:8080`
 3. 说明：当前是纯静态部署，不包含服务端数据库与 API。
+
+## 线上后端（当前可用）
+1. 准备环境变量：复制 `docker/supabase/supabase.env.example` 为 `docker/supabase/supabase.env` 并填写真实值
+2. 使用外部数据库（默认）：`docker compose -f docker/docker-compose.online.yml up --build`
+3. 使用本地数据库容器：`docker compose -f docker/docker-compose.online.yml -f docker/docker-compose.online.db.yml up --build`
+4. API 地址：`http://localhost:8000`（/rest/v1、/auth/v1）
+5. 数据库：`localhost:54322`（仅本地调试）
+
+## 前端接入线上模式（可选）
+1. 配置环境变量：`VITE_DATA_MODE=online`
+2. 配置 API：`VITE_SUPABASE_URL=http://localhost:8000`
+3. 配置密钥：`VITE_SUPABASE_ANON_KEY=...`（见 docker/supabase/supabase.env）
 
 ## Docker 调试数据格式约定
 > 说明：这里给出“未来 API 对接”的数据格式约定，用于开发联调与 mock 数据一致性。
