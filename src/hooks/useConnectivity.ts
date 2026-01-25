@@ -11,8 +11,8 @@ interface ConnectivityState {
 
 /**
  * 连接状态 Hook：
- * - local：单机本地模式（生产 Electron：SQLite；浏览器调试：localStorage）
- * - online/offline：保留类型以兼容历史 UI（当前版本不启用线上模式）
+ * - local：离线本地模式（Electron：SQLite；浏览器调试：localStorage）
+ * - online/offline：线上模式（VITE_DATA_MODE=online）
  * - checking：首次加载/重新探测中
  */
 export const useConnectivity = (): ConnectivityState => {

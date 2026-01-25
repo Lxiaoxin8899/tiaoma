@@ -1,7 +1,13 @@
 ﻿/// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  // 说明：本项目定位为单机软件；不再暴露线上 Supabase 相关环境变量，避免数据源分裂
+  // 说明：数据模式开关（online/offline）
+  readonly VITE_DATA_MODE?: string
+  // 说明：Supabase API 地址（例如 http://localhost:8000）
+  readonly VITE_SUPABASE_URL?: string
+  // 说明：Supabase ANON KEY
+  readonly VITE_SUPABASE_ANON_KEY?: string
+  // 说明：可选功能开关
   readonly VITE_ENABLE_IP_LOGGING?: string
 }
 
