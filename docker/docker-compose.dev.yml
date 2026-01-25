@@ -1,4 +1,3 @@
-﻿version: "3.9"
 services:
   web:
     # 说明：前端开发容器，使用 Vite 热更新

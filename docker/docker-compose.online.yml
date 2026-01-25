@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     # 说明：PostgreSQL 数据库（使用 Supabase 官方镜像，与 online.db.yml 保持一致）
