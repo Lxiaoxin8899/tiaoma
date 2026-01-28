@@ -1,12 +1,8 @@
--- 物料管理与条码生成系统数据库结构
-
--- 创建扩展
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 单位表
 CREATE TABLE units (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
@@ -19,9 +15,8 @@ CREATE TABLE units (
     updated_by UUID REFERENCES auth.users(id)
 );
 
--- 物料分类表
 CREATE TABLE material_categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
     parent_id UUID REFERENCES material_categories(id),
@@ -32,9 +27,8 @@ CREATE TABLE material_categories (
     updated_by UUID REFERENCES auth.users(id)
 );
 
--- 供应商表
 CREATE TABLE suppliers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
     contact_person VARCHAR(100),
@@ -48,9 +42,8 @@ CREATE TABLE suppliers (
     updated_by UUID REFERENCES auth.users(id)
 );
 
--- 物料表
 CREATE TABLE materials (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
     specification TEXT,
@@ -67,9 +60,8 @@ CREATE TABLE materials (
     updated_by UUID REFERENCES auth.users(id)
 );
 
--- 物料编码表
 CREATE TABLE material_codes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     material_id UUID NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
     code VARCHAR(100) NOT NULL,
     code_type VARCHAR(20) NOT NULL CHECK (code_type IN ('internal', 'supplier', 'customer', 'barcode')),
@@ -80,9 +72,8 @@ CREATE TABLE material_codes (
     UNIQUE(material_id, code, code_type)
 );
 
--- 物料批次表
 CREATE TABLE material_batches (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     material_id UUID NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
     batch_number VARCHAR(50) NOT NULL,
     production_date DATE,
@@ -99,9 +90,8 @@ CREATE TABLE material_batches (
     UNIQUE(material_id, batch_number)
 );
 
--- 条码表
 CREATE TABLE barcodes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     material_id UUID NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
     batch_id UUID REFERENCES material_batches(id) ON DELETE CASCADE,
     barcode VARCHAR(200) NOT NULL,
@@ -117,9 +107,8 @@ CREATE TABLE barcodes (
     created_by UUID REFERENCES auth.users(id)
 );
 
--- 审计日志表
 CREATE TABLE audit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     table_name VARCHAR(100) NOT NULL,
     record_id UUID NOT NULL,
     action VARCHAR(10) NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
@@ -131,7 +120,6 @@ CREATE TABLE audit_logs (
     user_agent TEXT
 );
 
--- 创建索引
 CREATE INDEX idx_materials_code ON materials(code);
 CREATE INDEX idx_materials_name ON materials(name);
 CREATE INDEX idx_materials_category ON materials(category_id);
@@ -150,7 +138,6 @@ CREATE INDEX idx_audit_logs_table_record ON audit_logs(table_name, record_id);
 CREATE INDEX idx_audit_logs_changed_by ON audit_logs(changed_by);
 CREATE INDEX idx_audit_logs_changed_at ON audit_logs(changed_at);
 
--- 创建更新时间触发器函数
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -159,7 +146,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- 为需要自动更新updated_at的表创建触发器
 CREATE TRIGGER update_materials_updated_at BEFORE UPDATE ON materials
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -175,7 +161,6 @@ CREATE TRIGGER update_units_updated_at BEFORE UPDATE ON units
 CREATE TRIGGER update_material_batches_updated_at BEFORE UPDATE ON material_batches
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 创建审计日志触发器函数
 CREATE OR REPLACE FUNCTION create_audit_log()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -196,7 +181,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- 为所有业务表创建审计日志触发器
 CREATE TRIGGER audit_materials AFTER INSERT OR UPDATE OR DELETE ON materials
     FOR EACH ROW EXECUTE FUNCTION create_audit_log();
 
@@ -218,7 +202,6 @@ CREATE TRIGGER audit_material_batches AFTER INSERT OR UPDATE OR DELETE ON materi
 CREATE TRIGGER audit_barcodes AFTER INSERT OR UPDATE OR DELETE ON barcodes
     FOR EACH ROW EXECUTE FUNCTION create_audit_log();
 
--- 创建库存更新函数
 CREATE OR REPLACE FUNCTION update_material_stock()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -242,23 +225,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- 为批次表创建库存更新触发器
 CREATE TRIGGER update_material_stock_trigger AFTER INSERT OR UPDATE OR DELETE ON material_batches
     FOR EACH ROW EXECUTE FUNCTION update_material_stock();
 
--- 插入基础数据
-INSERT INTO units (code, name, symbol, category, created_by) VALUES
-('PCS', '件', '件', 'piece', (SELECT id FROM auth.users LIMIT 1)),
-('KG', '千克', 'kg', 'weight', (SELECT id FROM auth.users LIMIT 1)),
-('G', '克', 'g', 'weight', (SELECT id FROM auth.users LIMIT 1)),
-('L', '升', 'L', 'volume', (SELECT id FROM auth.users LIMIT 1)),
-('ML', '毫升', 'ml', 'volume', (SELECT id FROM auth.users LIMIT 1)),
-('M', '米', 'm', 'length', (SELECT id FROM auth.users LIMIT 1)),
-('M2', '平方米', 'm²', 'area', (SELECT id FROM auth.users LIMIT 1));
-
-INSERT INTO material_categories (code, name, created_by) VALUES
-('ELEC', '电子元器件', (SELECT id FROM auth.users LIMIT 1)),
-('MECH', '机械配件', (SELECT id FROM auth.users LIMIT 1)),
-('CHEM', '化工原料', (SELECT id FROM auth.users LIMIT 1)),
-('PACK', '包装材料', (SELECT id FROM auth.users LIMIT 1)),
-('TOOL', '工具', (SELECT id FROM auth.users LIMIT 1));

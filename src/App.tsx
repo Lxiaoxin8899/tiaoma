@@ -5,6 +5,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import Login from './pages/Login';
 
 // 说明：路由级懒加载，降低首屏包体与首次解析开销（配合 Vite 代码分割效果更佳）
 import Home from './pages/Home';
@@ -42,7 +43,8 @@ function App() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
           <React.Suspense fallback={<LoadingSpinner className="min-h-[60vh]" />}>
             <Routes>
-                {/* 单机版：不需要登录页；这里用 ProtectedRoute 仅做“会话初始化”，不做拦截 */}
+                <Route path="/login" element={<Login />} />
+                {/* 业务页面需要登录后访问（离线模式会自动放行） */}
                 <Route
                   element={
                     <ProtectedRoute>

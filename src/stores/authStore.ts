@@ -217,7 +217,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       const { data, error } = await supabase.auth.getUser();
       if (error) {
-        reportError(error, 'auth.checkAuth');
+        const authError = error as { name?: string; message?: string };
+        const isSessionMissing =
+          authError?.name === 'AuthSessionMissingError' ||
+          authError?.message?.includes('Auth session missing');
+        if (!isSessionMissing) {
+          reportError(error, 'auth.checkAuth');
+        }
       }
 
       if (data?.user) {
@@ -286,20 +292,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   hasRole: (role: string): boolean => {
     const user = get().user;
-    if (!user) return false;
-
+    const effectiveRole = (user?.role ?? 'viewer') as AppUser['role'];
     const allowedRoles = ROLE_HIERARCHY[role as keyof typeof ROLE_HIERARCHY] as readonly string[] | undefined;
-    return allowedRoles?.includes(user.role) || false;
+    return allowedRoles?.includes(effectiveRole) || false;
   },
 
   hasPermission: (permission: string): boolean => {
     const user = get().user;
-    if (!user) return false;
+    const effectiveRole = (user?.role ?? 'viewer') as AppUser['role'];
 
     // 模块权限
     if (permission in MODULE_PERMISSIONS) {
       const allowedRoles = MODULE_PERMISSIONS[permission as keyof typeof MODULE_PERMISSIONS] as readonly string[];
-      return allowedRoles.includes(user.role);
+      return allowedRoles.includes(effectiveRole);
     }
 
     // 基础权限兜底（read/write/delete/manage）
@@ -313,7 +318,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       } as const;
       
       const allowedRoles = basicPermissionMap[permission as keyof typeof basicPermissionMap] as readonly string[];
-      return allowedRoles.includes(user.role);
+      return allowedRoles.includes(effectiveRole);
     }
 
     return false;

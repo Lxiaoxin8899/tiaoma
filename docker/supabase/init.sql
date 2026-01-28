@@ -1,25 +1,10 @@
--- 创建 auth schema（GoTrue 需要）
+﻿-- Create auth schema required by GoTrue if missing
 CREATE SCHEMA IF NOT EXISTS auth;
 
--- 创建 anon 和 authenticated 角色（PostgREST 需要）
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
-    CREATE ROLE anon NOLOGIN;
-  END IF;
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
-    CREATE ROLE authenticated NOLOGIN;
-  END IF;
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN
-    CREATE ROLE service_role NOLOGIN;
-  END IF;
-END
-$$;
-
--- 授权
-GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+-- Pre-seed GoTrue migration to skip a backfill that fails on uuid identities
+CREATE TABLE IF NOT EXISTS auth.schema_migrations (
+  version varchar(255) PRIMARY KEY
+);
+INSERT INTO auth.schema_migrations (version)
+VALUES ('20221208132122')
+ON CONFLICT DO NOTHING;

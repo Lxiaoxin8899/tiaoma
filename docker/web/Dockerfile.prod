@@ -1,34 +1,42 @@
 FROM node:20-bullseye AS builder
 
-# 说明：安装构建依赖，避免 better-sqlite3 编译失败
+# Build deps for native modules (better-sqlite3)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-# 说明：启用 pnpm（通过 corepack）
+# Enable pnpm via corepack
 RUN corepack enable
 
 WORKDIR /app
 
-# 说明：先复制依赖描述文件以提升缓存命中
+# Copy lockfiles first for better cache
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# 说明：安装依赖并构建前端
+# Install deps and build
 RUN pnpm install --frozen-lockfile
 
-# 说明：复制源码并构建
+# Copy source and build
 COPY . .
 
-# 说明：禁用代码分割，避免 React 加载顺序问题导致白屏
+# Build-time app config
+ARG VITE_DATA_MODE=offline
+ARG VITE_SUPABASE_URL=
+ARG VITE_SUPABASE_ANON_KEY=
+ENV VITE_DATA_MODE=$VITE_DATA_MODE \
+    VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
+    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
+# Disable code splitting to avoid file:// loading issues in Electron
 ENV VITE_ENABLE_CODE_SPLITTING=false
 RUN pnpm build
 
 FROM nginx:1.27-alpine
 
-# 说明：使用 SPA 回退配置
+# SPA fallback config
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
 
-# 说明：复制构建产物
+# Copy build output
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
