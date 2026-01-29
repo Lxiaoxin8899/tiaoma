@@ -299,15 +299,12 @@ export const validateMaterialData = (
         code: data['物料编码'],
         name: data['物料名称'],
         specification: data['规格型号'] || '',
-        unit: data['单位'],
         unit_id: unit?.id,
         category_id: category?.id || '',
         current_stock: currentStock,
         min_stock: minStock,
         max_stock: maxStock,
         status: status,
-        created_by: '', // 将在保存时设置
-        updated_by: '', // 将在保存时设置
       });
     }
   });

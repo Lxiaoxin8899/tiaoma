@@ -38,6 +38,9 @@ interface Window {
     backup: {
       save: (json: string, opts?: { retentionDays?: number }) => Promise<{ ok: boolean; path?: string; error?: string }>
       openFolder: () => Promise<{ ok: boolean; path?: string; error?: string | null }>
+      list: () => Promise<{ ok: boolean; files?: Array<{ name: string; path: string; size: number; mtime: string }>; error?: string }>
+      read: (filePath: string) => Promise<{ ok: boolean; content?: string; error?: string }>
+      delete: (filePath: string) => Promise<{ ok: boolean; error?: string }>
     }
   }
 }

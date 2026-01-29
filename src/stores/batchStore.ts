@@ -182,6 +182,9 @@ export const useBatchStore = create<BatchState>((set, get) => ({
         status: data.status || 'pending',
         // 初始库存=入库数量（后续出库只更新 remaining_quantity）
         remaining_quantity: data.remaining_quantity ?? data.quantity,
+        // 日期字段：空字符串转为 null，避免数据库类型错误
+        production_date: data.production_date || null,
+        expiry_date: data.expiry_date || null,
         created_by: userId,
         updated_by: userId,
       }
@@ -212,11 +215,19 @@ export const useBatchStore = create<BatchState>((set, get) => ({
     try {
       const current = get().batches.find((b) => b.id === id)
 
-      // 说明：如果是从“编辑入库单”更新了入库数量(quantity)，但没有显式传 remaining_quantity，
-      // 则按“已出库数量不变”的原则重算 remaining_quantity，避免库存/统计错乱。
+      // 说明：如果是从"编辑入库单"更新了入库数量(quantity)，但没有显式传 remaining_quantity，
+      // 则按"已出库数量不变"的原则重算 remaining_quantity，避免库存/统计错乱。
       const updatePayload: Record<string, unknown> = {
         ...data,
         updated_at: new Date().toISOString(),
+      }
+
+      // 日期字段：空字符串转为 null，避免数据库类型错误
+      if ('production_date' in data) {
+        updatePayload.production_date = data.production_date || null
+      }
+      if ('expiry_date' in data) {
+        updatePayload.expiry_date = data.expiry_date || null
       }
 
       const explicitRemaining = (data as Partial<{ remaining_quantity?: number }>).remaining_quantity

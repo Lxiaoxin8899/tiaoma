@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import SettingsForm from '../components/settings/SettingsForm';
+import BackupManager from '../components/settings/BackupManager';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
 import { useTheme } from '../hooks/useTheme';
@@ -31,6 +32,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
   const [showConfigForm, setShowConfigForm] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<SystemSettingsFormData | null>(null);
   const [showRecycleBin, setShowRecycleBin] = useState(false);
+  const [showBackupManager, setShowBackupManager] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -369,14 +371,20 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
             ))}
           </div>
 
-          {/* 单机数据保护工具：仅在“系统设置”页展示 */}
+          {/* 单机数据保护工具：仅在"系统设置"页展示 */}
           {activeTab === 'system' && (
             <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-6">
               <h4 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">数据保护（单机模式）</h4>
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={handleBackupNow}
+                  onClick={() => setShowBackupManager(true)}
                   className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700"
+                >
+                  备份管理
+                </button>
+                <button
+                  onClick={handleBackupNow}
+                  className="px-4 py-2 rounded-md bg-green-600 text-white text-sm hover:bg-green-700"
                 >
                   立即备份
                 </button>
@@ -394,7 +402,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
                 </button>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-                说明：删除操作会进入回收站；系统会按设置中的“备份频率/保留天数”自动备份本地数据。
+                说明：点击"备份管理"可查看所有备份、预览数据并恢复历史版本。删除操作会进入回收站。
               </p>
             </div>
           )}
@@ -414,6 +422,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ className = '' }) => {
       {showRecycleBin && (
         <RecycleBinModal
           onClose={() => setShowRecycleBin(false)}
+        />
+      )}
+
+      {showBackupManager && (
+        <BackupManager
+          onClose={() => setShowBackupManager(false)}
         />
       )}
 

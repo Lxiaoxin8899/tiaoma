@@ -5,10 +5,10 @@
       dockerfile: docker/web/Dockerfile.prod
       args:
         VITE_DATA_MODE: online
-        VITE_SUPABASE_URL: http://192.168.5.34:8000
-        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3Njk1NDA2MzgsImlzcyI6InN1cGFiYXNlIiwiZXhwIjoyMDg0OTAwNjM4LCJyb2xlIjoiYW5vbiJ9.ifFArQ45Yx87wn_bJIqPSQy7b9omDIFze46CSmaqLW8
+        VITE_SUPABASE_URL: ${SUPABASE_URL:-http://localhost:8000}
+        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3Njk1NDA2MzgsImlzcyI6InN1cGFiYXNlIiwiZXhwIjoyMDg0OTAwNjM4LCJyb2xlIjoiYW5vbiJ9.ifFArQ45Yx87wn_bJIqPSQy7b9omDIFze46CSmaqLW8}
     image: tiaoma-web:prod
     container_name: tiaoma-web
     ports:
-      - "8082:80"
+      - "8083:80"
     restart: unless-stopped

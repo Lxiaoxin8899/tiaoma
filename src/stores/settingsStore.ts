@@ -99,7 +99,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .range(0, 0);
 
       // 如果系统设置表为空，则创建默认设置（线上/离线都适用）

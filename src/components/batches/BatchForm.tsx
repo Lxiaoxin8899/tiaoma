@@ -1,11 +1,12 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect, useCallback } from 'react'
 import { Dialog } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useBatchStore } from '@/stores/batchStore'
 import { useMaterialStore } from '@/stores/materialStore'
 import { useSupplierStore } from '@/stores/supplierStore'
-import { BatchFormData, MaterialBatch } from '@/types/database'
+import { BatchFormData, MaterialBatch, Material } from '@/types/database'
 import SearchableSelect from '@/components/common/SearchableSelect'
+import { supabase } from '@/lib/supabase'
 
 interface BatchFormProps {
   batch?: MaterialBatch | null
@@ -33,16 +34,74 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  // 物料搜索状态
+  const [searchedMaterials, setSearchedMaterials] = useState<Material[]>([])
+  const [materialSearchLoading, setMaterialSearchLoading] = useState(false)
+
   useEffect(() => {
-    fetchMaterials()
+    // 初始加载少量物料（用于显示已选中的物料）
+    fetchMaterials({ limit: 20 })
     fetchSuppliers()
   }, [fetchMaterials, fetchSuppliers])
+
+  // 服务端搜索物料
+  const handleMaterialSearch = useCallback(async (query: string) => {
+    if (query.length < 1) {
+      setSearchedMaterials([])
+      return
+    }
+
+    setMaterialSearchLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select(`
+          *,
+          unit_obj:units(id, code, name, symbol),
+          category:material_categories(id, code, name)
+        `)
+        .or(`name.ilike.%${query}%,code.ilike.%${query}%,specification.ilike.%${query}%`)
+        .order('code', { ascending: true })
+        .range(0, 49) // 最多返回50条
+
+      if (error) throw error
+      setSearchedMaterials((data || []) as Material[])
+    } catch (err) {
+      console.error('搜索物料失败:', err)
+      setSearchedMaterials([])
+    } finally {
+      setMaterialSearchLoading(false)
+    }
+  }, [])
+
+  // 合并已选物料和搜索结果
+  const materialOptions = React.useMemo(() => {
+    const selectedMaterial = materials.find(m => m.id === formData.material_id)
+    const allMaterials = [...searchedMaterials]
+
+    // 确保已选中的物料在列表中
+    if (selectedMaterial && !allMaterials.find(m => m.id === selectedMaterial.id)) {
+      allMaterials.unshift(selectedMaterial)
+    }
+
+    // 去重
+    const uniqueMaterials = allMaterials.filter((m, index, self) =>
+      index === self.findIndex(t => t.id === m.id)
+    )
+
+    return uniqueMaterials.map(material => ({
+      id: material.id,
+      label: `${material.code} - ${material.name}`,
+      subtitle: material.specification || undefined
+    }))
+  }, [materials, searchedMaterials, formData.material_id])
 
   // 说明：一个物料编码只绑定一个供应商；新建批次时自动带出，避免每次手动改供应商
   const selectedMaterial = React.useMemo(() => {
     if (!formData.material_id) return null
-    return materials.find(m => m.id === formData.material_id) || null
-  }, [formData.material_id, materials])
+    return materials.find(m => m.id === formData.material_id) ||
+           searchedMaterials.find(m => m.id === formData.material_id) || null
+  }, [formData.material_id, materials, searchedMaterials])
 
   useEffect(() => {
     // 编辑批次时不自动覆盖（避免用户查看历史数据时被改动）
@@ -145,11 +204,9 @@ const BatchForm: React.FC<BatchFormProps> = ({ batch, onClose, onSuccess }) => {
               required
               value={formData.material_id}
               onChange={(value) => handleInputChange('material_id', value)}
-              options={materials.map(material => ({
-                id: material.id,
-                label: `${material.code} - ${material.name}`,
-                subtitle: material.specification || undefined
-              }))}
+              options={materialOptions}
+              onSearch={handleMaterialSearch}
+              loading={materialSearchLoading}
               placeholder="搜索物料编码、名称..."
               disabled={!!batch}
               error={errors.material_id}

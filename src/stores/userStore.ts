@@ -114,40 +114,47 @@ export const useUserStore = create<UserState>((set, get) => ({
         return null;
       }
 
-      // 说明：单机模式：直接写入本地 users 表（主存储为 SQLite），不启用线上注册流程。
+      // 检查用户是否已存在
       const exists = get().users.some((u) => u.email === data.email || u.username === data.username);
       if (exists) {
         throw new Error('用户已存在（邮箱或用户名重复）');
       }
 
-      const id =
-        (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-          ? crypto.randomUUID()
-          : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-
-      const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert([
-          {
-            id,
-            email: data.email,
+      // 通过 Supabase Auth 创建用户，触发器会自动同步到 public.users 表
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
             username: data.username,
             full_name: data.full_name,
-            role: data.role,
+            role: data.role || 'viewer',
             status: data.status || 'active',
             department: data.department,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           },
-        ])
-        .select()
-        .single();
+        },
+      });
 
-      if (insertError) throw insertError;
+      if (signUpError) {
+        // 处理常见错误
+        if (signUpError.message.includes('already registered')) {
+          throw new Error('该邮箱已被注册');
+        }
+        throw signUpError;
+      }
 
+      if (!signUpData.user) {
+        throw new Error('创建用户失败');
+      }
+
+      // 等待触发器同步完成后刷新用户列表
+      await new Promise(resolve => setTimeout(resolve, 500));
       await get().fetchUsers({ page: get().currentPage });
+
+      // 获取新创建的用户
+      const newUser = get().users.find(u => u.email === data.email);
       set({ loading: false });
-      return (newUser as User) || null;
+      return newUser || null;
     } catch (err) {
       const appError = errorHandler.handle(err, '创建用户失败');
       reportError(err, 'user.createUser', { email: data.email });

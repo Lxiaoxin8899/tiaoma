@@ -37,5 +37,20 @@ contextBridge.exposeInMainWorld('tiaoma', {
     openFolder: async () => {
       return await ipcRenderer.invoke('tiaoma:backup:openFolder')
     },
+
+    // 列出所有备份文件
+    list: async () => {
+      return await ipcRenderer.invoke('tiaoma:backup:list')
+    },
+
+    // 读取备份文件内容
+    read: async (filePath) => {
+      return await ipcRenderer.invoke('tiaoma:backup:read', { filePath })
+    },
+
+    // 删除备份文件
+    delete: async (filePath) => {
+      return await ipcRenderer.invoke('tiaoma:backup:delete', { filePath })
+    },
   },
 })

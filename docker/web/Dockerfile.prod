@@ -13,8 +13,8 @@ WORKDIR /app
 # Copy lockfiles first for better cache
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install deps and build
-RUN pnpm install --frozen-lockfile
+# Install deps (allow lockfile update for new dependencies)
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source and build
 COPY . .

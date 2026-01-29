@@ -12,7 +12,30 @@ import { createLocalClient } from './localSupabase'
 // 3) 显式设置 VITE_DATA_MODE=offline 时强制离线
 // =============================================================================
 const dataMode = (import.meta.env.VITE_DATA_MODE || '').toLowerCase()
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+
+// 动态获取 Supabase URL：支持局域网访问
+// 如果配置的是 localhost，则自动替换为当前访问的主机地址
+const getSupabaseUrl = (): string => {
+  const configuredUrl = import.meta.env.VITE_SUPABASE_URL || ''
+  if (!configuredUrl) return ''
+
+  try {
+    const url = new URL(configuredUrl)
+    // 如果配置的是 localhost 且当前不是从 localhost 访问，则使用当前主机
+    if ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+        typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1') {
+      url.hostname = window.location.hostname
+      return url.toString().replace(/\/$/, '')
+    }
+    return configuredUrl
+  } catch {
+    return configuredUrl
+  }
+}
+
+const supabaseUrl = getSupabaseUrl()
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 const hasOnlineConfig = Boolean(supabaseUrl && supabaseAnonKey)

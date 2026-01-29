@@ -1,7 +1,7 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect, useCallback } from 'react'
 import { useBatchStore } from '@/stores/batchStore'
 import { useMaterialStore } from '@/stores/materialStore'
-import { MaterialBatch } from '@/types/database'
+import { MaterialBatch, Material } from '@/types/database'
 import {
   PencilIcon,
   TrashIcon,
@@ -19,9 +19,11 @@ import BatchDetailModal from './BatchDetailModal'
 import OutboundModal from './OutboundModal'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import Pagination from '@/components/common/Pagination'
+import SearchableSelect from '@/components/common/SearchableSelect'
 import { getStatusBadgeColor } from '@/utils/statusHelpers'
 import { exportToExcel, getDateSuffix } from '@/lib/exportUtils'
 import { useToast } from '@/components/common/Toast'
+import { supabase } from '@/lib/supabase'
 
 const BatchList: React.FC = () => {
   const {
@@ -53,10 +55,67 @@ const BatchList: React.FC = () => {
   const [outboundBatch, setOutboundBatch] = useState<MaterialBatch | null>(null)
   const [isExporting, setIsExporting] = useState(false)
 
+  // 物料筛选搜索状态
+  const [searchedMaterials, setSearchedMaterials] = useState<Material[]>([])
+  const [materialSearchLoading, setMaterialSearchLoading] = useState(false)
+
   useEffect(() => {
-    fetchMaterials()
+    // 只加载少量物料用于显示已选中的物料
+    fetchMaterials({ limit: 20 })
     fetchBatches()
   }, [fetchMaterials, fetchBatches])
+
+  // 服务端搜索物料
+  const handleMaterialSearch = useCallback(async (query: string) => {
+    if (query.length < 1) {
+      setSearchedMaterials([])
+      return
+    }
+
+    setMaterialSearchLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select(`
+          *,
+          unit_obj:units(id, code, name, symbol),
+          category:material_categories(id, code, name)
+        `)
+        .or(`name.ilike.%${query}%,code.ilike.%${query}%`)
+        .order('code', { ascending: true })
+        .range(0, 49)
+
+      if (error) throw error
+      setSearchedMaterials((data || []) as Material[])
+    } catch (err) {
+      console.error('搜索物料失败:', err)
+      setSearchedMaterials([])
+    } finally {
+      setMaterialSearchLoading(false)
+    }
+  }, [])
+
+  // 合并已选物料和搜索结果
+  const materialFilterOptions = React.useMemo(() => {
+    const selectedMaterial = materials.find(m => m.id === selectedMaterialId)
+    const allMaterials = [...searchedMaterials]
+
+    // 确保已选中的物料在列表中
+    if (selectedMaterial && !allMaterials.find(m => m.id === selectedMaterial.id)) {
+      allMaterials.unshift(selectedMaterial)
+    }
+
+    // 去重
+    const uniqueMaterials = allMaterials.filter((m, index, self) =>
+      index === self.findIndex(t => t.id === m.id)
+    )
+
+    return uniqueMaterials.map(material => ({
+      id: material.id,
+      label: `${material.code} - ${material.name}`,
+      subtitle: material.specification || undefined
+    }))
+  }, [materials, searchedMaterials, selectedMaterialId])
 
   useEffect(() => {
     fetchBatches()
@@ -67,7 +126,7 @@ const BatchList: React.FC = () => {
   }
 
   const handleMaterialFilter = (materialId: string) => {
-    setSelectedMaterialId(materialId === 'all' ? null : materialId)
+    setSelectedMaterialId(materialId || null)
   }
 
   const handlePageChange = (page: number) => {
@@ -254,19 +313,17 @@ const BatchList: React.FC = () => {
           </div>
 
           {/* Material Filter */}
-          <div className="sm:w-48">
-            <select
-              value={selectedMaterialId || 'all'}
-              onChange={(e) => handleMaterialFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            >
-              <option value="all">所有物料</option>
-              {materials.map(material => (
-                <option key={material.id} value={material.id}>
-                  {material.code} - {material.name}
-                </option>
-              ))}
-            </select>
+          <div className="sm:w-64">
+            <SearchableSelect
+              label=""
+              value={selectedMaterialId || ''}
+              onChange={handleMaterialFilter}
+              options={materialFilterOptions}
+              onSearch={handleMaterialSearch}
+              loading={materialSearchLoading}
+              placeholder="筛选物料..."
+              allowClear
+            />
           </div>
         </div>
       </div>

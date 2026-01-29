@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react'
+﻿import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Combobox } from '@headlessui/react'
 import { CheckIcon, ChevronUpDownIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -18,6 +18,9 @@ interface SearchableSelectProps {
     label: string
     required?: boolean
     allowClear?: boolean
+    // 服务端搜索支持
+    onSearch?: (query: string) => Promise<void>
+    loading?: boolean
 }
 
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -29,13 +32,34 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     error,
     label,
     required = false,
-    allowClear = false
+    allowClear = false,
+    onSearch,
+    loading = false
 }) => {
     const [query, setQuery] = useState('')
 
     const selectedOption = options.find(option => option.id === value)
 
+    // 防抖搜索
+    useEffect(() => {
+        if (!onSearch) return
+
+        const timer = setTimeout(() => {
+            if (query.length >= 1) {
+                onSearch(query)
+            }
+        }, 300)
+
+        return () => clearTimeout(timer)
+    }, [query, onSearch])
+
+    // 本地过滤（当没有 onSearch 时使用）
     const filteredOptions = useMemo(() => {
+        if (onSearch) {
+            // 服务端搜索模式：直接返回 options（已经是搜索结果）
+            return options
+        }
+        // 本地过滤模式
         if (query === '') {
             return options
         }
@@ -43,7 +67,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             const searchText = `${option.label} ${option.subtitle || ''}`.toLowerCase()
             return searchText.includes(query.toLowerCase())
         })
-    }, [options, query])
+    }, [options, query, onSearch])
 
     return (
         <div>
@@ -67,9 +91,15 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                                 } ${disabled ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-900'} text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 dark:border-gray-700`}
                             displayValue={() => selectedOption ? `${selectedOption.label}${selectedOption.subtitle ? ` - ${selectedOption.subtitle}` : ''}` : ''}
                             onChange={(event) => setQuery(event.target.value)}
-                            placeholder={placeholder}
+                            placeholder={onSearch ? `${placeholder}（输入关键词搜索）` : placeholder}
                         />
-                        {/* 可选字段时允许清空选择，解决“只能选不能搜/不好改选”的体验问题 */}
+                        {/* 加载指示器 */}
+                        {loading && (
+                            <div className="absolute right-16 top-1/2 transform -translate-y-1/2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            </div>
+                        )}
+                        {/* 可选字段时允许清空选择，解决"只能选不能搜/不好改选"的体验问题 */}
                         {allowClear && !disabled && value && (
                             <button
                                 type="button"
@@ -90,9 +120,13 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     </div>
 
                     <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-900 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 dark:ring-gray-700 focus:outline-none">
-                        {filteredOptions.length === 0 && query !== '' ? (
+                        {loading ? (
+                            <div className="relative cursor-default select-none py-2 px-4 text-gray-500 dark:text-gray-400 text-center">
+                                搜索中...
+                            </div>
+                        ) : filteredOptions.length === 0 ? (
                             <div className="relative cursor-default select-none py-2 px-4 text-gray-700 dark:text-gray-200">
-                                未找到匹配项
+                                {onSearch && query.length < 1 ? '请输入关键词搜索' : '未找到匹配项'}
                             </div>
                         ) : (
                             filteredOptions.map((option) => (

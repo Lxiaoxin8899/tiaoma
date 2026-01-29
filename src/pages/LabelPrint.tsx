@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   PrinterIcon,
   ArrowDownTrayIcon,
@@ -11,8 +11,9 @@ import { useMaterialStore } from '../stores/materialStore';
 import { useBatchStore } from '../stores/batchStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import LabelPrintTemplate from '../components/labels/LabelPrintTemplate';
-import { LabelPrintData } from '../types/database';
+import { LabelPrintData, Material } from '../types/database';
 import { useToast } from '../components/common/Toast';
+import { supabase } from '../lib/supabase';
 
 // 标签配置类型
 export interface LabelConfig {
@@ -45,6 +46,13 @@ export interface LabelConfig {
 
 // 配置版本号 - 修改默认配置时递增此值，会自动清除旧配置
 const CONFIG_VERSION = 4;
+
+// 标签信息默认值（用户不需要每次都填写）
+const DEFAULT_LABEL_INFO = {
+  shelf_life: '12个月',
+  storage_conditions: '存放于阴凉干燥通风处，密封避光',
+  main_ingredients: '食品用香料、食品用香精辅料'
+};
 
 // 默认配置
 const DEFAULT_LABEL_CONFIG: LabelConfig = {
@@ -110,6 +118,10 @@ const LabelPrint: React.FC = () => {
   const [materialSearch, setMaterialSearch] = useState('');
   const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
 
+  // 服务端搜索物料状态
+  const [searchedMaterials, setSearchedMaterials] = useState<Material[]>([]);
+  const [materialSearchLoading, setMaterialSearchLoading] = useState(false);
+
   // 新建批次状态
   const [showNewBatchForm, setShowNewBatchForm] = useState(false);
   const [newBatchData, setNewBatchData] = useState({
@@ -133,10 +145,45 @@ const LabelPrint: React.FC = () => {
 
   // 初始化数据
   useEffect(() => {
-    fetchMaterials();
+    // 只加载少量物料用于显示已选中的物料
+    fetchMaterials({ limit: 20 });
     fetchSuppliers();
     fetchSettings();
   }, [fetchMaterials, fetchSuppliers, fetchSettings]);
+
+  // 服务端搜索物料（防抖）
+  useEffect(() => {
+    if (materialSearch.length < 1) {
+      setSearchedMaterials([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setMaterialSearchLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('materials')
+          .select(`
+            *,
+            unit_obj:units(id, code, name, symbol),
+            category:material_categories(id, code, name)
+          `)
+          .or(`name.ilike.%${materialSearch}%,code.ilike.%${materialSearch}%`)
+          .order('code', { ascending: true })
+          .range(0, 49);
+
+        if (error) throw error;
+        setSearchedMaterials((data || []) as Material[]);
+      } catch (err) {
+        console.error('搜索物料失败:', err);
+        setSearchedMaterials([]);
+      } finally {
+        setMaterialSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [materialSearch]);
 
   // 当选择物料后，获取该物料的批次
   useEffect(() => {
@@ -158,7 +205,8 @@ const LabelPrint: React.FC = () => {
   }, [labelConfig]);
 
   // 获取选中的物料和批次
-  const selectedMaterial = materials.find(m => m.id === selectedMaterialId);
+  const selectedMaterial = materials.find(m => m.id === selectedMaterialId) ||
+                           searchedMaterials.find(m => m.id === selectedMaterialId);
   const selectedBatch = batches.find(b => b.id === selectedBatchId);
   const materialBatches = batches.filter(b => b.material_id === selectedMaterialId);
 
@@ -233,9 +281,9 @@ const LabelPrint: React.FC = () => {
         product_name: selectedMaterial.name,
         product_code: selectedMaterial.code,
         weight: selectedMaterial.weight,
-        storage_conditions: selectedMaterial.storage_conditions,
-        main_ingredients: selectedMaterial.main_ingredients,
-        shelf_life: selectedMaterial.shelf_life,
+        storage_conditions: selectedMaterial.storage_conditions || DEFAULT_LABEL_INFO.storage_conditions,
+        main_ingredients: selectedMaterial.main_ingredients || DEFAULT_LABEL_INFO.main_ingredients,
+        shelf_life: selectedMaterial.shelf_life || DEFAULT_LABEL_INFO.shelf_life,
         production_date: selectedBatch.production_date,
         batch_number: batchNumber,
         material_barcode: materialCode,
@@ -257,9 +305,9 @@ const LabelPrint: React.FC = () => {
         product_name: selectedMaterial.name,
         product_code: selectedMaterial.code,
         weight: selectedMaterial.weight,
-        storage_conditions: selectedMaterial.storage_conditions,
-        main_ingredients: selectedMaterial.main_ingredients,
-        shelf_life: selectedMaterial.shelf_life,
+        storage_conditions: selectedMaterial.storage_conditions || DEFAULT_LABEL_INFO.storage_conditions,
+        main_ingredients: selectedMaterial.main_ingredients || DEFAULT_LABEL_INFO.main_ingredients,
+        shelf_life: selectedMaterial.shelf_life || DEFAULT_LABEL_INFO.shelf_life,
         production_date: newBatchData.production_date,
         batch_number: batchNumber,
         material_barcode: materialCode,
@@ -279,15 +327,15 @@ const LabelPrint: React.FC = () => {
 
   const labelData = buildLabelData();
 
-  // 过滤物料列表
-  const filteredMaterials = materials.filter(m => {
-    const searchLower = materialSearch.toLowerCase();
-    const name = typeof m.name === 'string' ? m.name : String(m.name || '');
-    const code = typeof m.code === 'string' ? m.code : String(m.code || '');
-    const nameMatch = name.toLowerCase().includes(searchLower);
-    const codeMatch = code.toLowerCase().includes(searchLower);
-    return nameMatch || codeMatch;
-  });
+  // 显示的物料列表（服务端搜索结果）
+  const displayMaterials = React.useMemo(() => {
+    // 确保已选中的物料在列表中
+    const result = [...searchedMaterials];
+    if (selectedMaterial && !result.find(m => m.id === selectedMaterial.id)) {
+      result.unshift(selectedMaterial);
+    }
+    return result;
+  }, [searchedMaterials, selectedMaterial]);
 
   // 将 Canvas 转换为图片的辅助函数
   const convertCanvasToImages = (container: HTMLElement): string => {
@@ -927,12 +975,21 @@ const LabelPrint: React.FC = () => {
 
               {showMaterialDropdown && (
                 <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
-                  {filteredMaterials.length === 0 ? (
+                  {materialSearchLoading ? (
+                    <div className="px-4 py-3 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      搜索中...
+                    </div>
+                  ) : materialSearch.length < 1 ? (
+                    <div className="px-4 py-3 text-gray-500 dark:text-gray-400">
+                      请输入关键词搜索物料
+                    </div>
+                  ) : displayMaterials.length === 0 ? (
                     <div className="px-4 py-3 text-gray-500 dark:text-gray-400">
                       未找到匹配的物料
                     </div>
                   ) : (
-                    filteredMaterials.map(material => (
+                    displayMaterials.map(material => (
                       <button
                         key={material.id}
                         onClick={() => {

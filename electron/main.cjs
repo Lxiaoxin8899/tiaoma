@@ -1100,6 +1100,82 @@ ipcMain.handle('tiaoma:backup:openFolder', async () => {
 
 
 
+// 列出所有备份文件
+ipcMain.handle('tiaoma:backup:list', async () => {
+  try {
+    const dir = getBackupDir()
+    const files = fs.readdirSync(dir)
+      .filter((name) => name.endsWith('.json') && name.startsWith('tiaoma-backup-'))
+      .map((name) => {
+        const filePath = path.join(dir, name)
+        const stat = fs.statSync(filePath)
+        return {
+          name,
+          path: filePath,
+          size: stat.size,
+          mtime: stat.mtime.toISOString(),
+        }
+      })
+      .sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime())
+    return { ok: true, files }
+  } catch (e) {
+    console.error('[列出备份文件失败]', e)
+    return { ok: false, error: '列出备份文件失败', files: [] }
+  }
+})
+
+// 读取备份文件内容
+ipcMain.handle('tiaoma:backup:read', async (_event, args) => {
+  try {
+    const filePath = args?.filePath
+    if (!filePath) return { ok: false, error: '未指定文件路径' }
+
+    // 安全检查：确保文件在备份目录内
+    const dir = getBackupDir()
+    const resolvedPath = path.resolve(filePath)
+    if (!resolvedPath.startsWith(dir)) {
+      return { ok: false, error: '非法文件路径' }
+    }
+
+    if (!fs.existsSync(resolvedPath)) {
+      return { ok: false, error: '文件不存在' }
+    }
+
+    const content = fs.readFileSync(resolvedPath, 'utf8')
+    return { ok: true, content }
+  } catch (e) {
+    console.error('[读取备份文件失败]', e)
+    return { ok: false, error: '读取备份文件失败' }
+  }
+})
+
+// 删除备份文件
+ipcMain.handle('tiaoma:backup:delete', async (_event, args) => {
+  try {
+    const filePath = args?.filePath
+    if (!filePath) return { ok: false, error: '未指定文件路径' }
+
+    // 安全检查：确保文件在备份目录内
+    const dir = getBackupDir()
+    const resolvedPath = path.resolve(filePath)
+    if (!resolvedPath.startsWith(dir)) {
+      return { ok: false, error: '非法文件路径' }
+    }
+
+    if (!fs.existsSync(resolvedPath)) {
+      return { ok: false, error: '文件不存在' }
+    }
+
+    fs.unlinkSync(resolvedPath)
+    return { ok: true }
+  } catch (e) {
+    console.error('[删除备份文件失败]', e)
+    return { ok: false, error: '删除备份文件失败' }
+  }
+})
+
+
+
 // 自定义协议名称（用于解决 file:// 协议下 ES modules 的 CORS 问题）
 
 const PROTOCOL_SCHEME = 'app'

@@ -15,11 +15,15 @@ import {
   ClipboardDocumentListIcon,
   SunIcon,
   MoonIcon,
-  PrinterIcon
+  PrinterIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../stores/authStore';
 import { useConnectivity } from '../../hooks/useConnectivity';
 import { useTheme } from '../../hooks/useTheme';
+import { useHotkey } from '../../hooks/useHotkeys';
+import GlobalSearch from '../common/GlobalSearch';
+import AlertCenter from '../alerts/AlertCenter';
 
 const Layout: React.FC = () => {
   const location = useLocation();
@@ -29,6 +33,10 @@ const Layout: React.FC = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // 全局搜索快捷键 Ctrl+K
+  useHotkey('ctrl+k', () => setSearchOpen(true));
 
   const navigation = [
     // 说明：`/` 仅用于重定向到 `/dashboard`，这里统一把导航入口指向 `/dashboard`，便于高亮与面包屑展示
@@ -210,6 +218,21 @@ const Layout: React.FC = () => {
 
             {/* 用户信息 */}
             <div className="flex items-center space-x-4">
+              {/* 全局搜索按钮 */}
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="hidden sm:flex items-center space-x-2 px-3 py-1.5 text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400 rounded-lg transition-colors"
+              >
+                <MagnifyingGlassIcon className="h-4 w-4" />
+                <span>搜索</span>
+                <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded">
+                  Ctrl+K
+                </kbd>
+              </button>
+
+              {/* 预警中心 */}
+              <AlertCenter />
+
               {/* 连接状态（点击可手动探测） */}
               <button
                 type="button"
@@ -278,6 +301,9 @@ const Layout: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* 全局搜索模态框 */}
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 };
